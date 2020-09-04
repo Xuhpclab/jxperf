@@ -1,0 +1,24 @@
+[submodule "thirdparty/xed"]
+	path = thirdparty/xed
+	url = https://github.com/intelxed/xed.git
+[submodule "thirdparty/mbuild"]
+	path = thirdparty/mbuild
+	url = https://github.com/intelxed/mbuild.git
+[submodule "thirdparty/bintrees"]
+	path = thirdparty/bintrees
+	url = https://github.com/mozman/bintrees.git
+[submodule "thirdparty/allocation-instrumenter"]
+	path = thirdparty/allocation-instrumenter
+	url = https://github.com/bolunli11/allocation-instrumenter.git
+[submodule "thirdparty/libpfm-4.10.1"]
+	path = thirdparty/libpfm-4.10.1
+	url = https://github.com/bolunli11/libpfm-4.10.1.git
+[submodule "thirdparty/boost"]
+	path = thirdparty/boost
+	url = https://github.com/bolunli11/boost-1_71_0.git
+[submodule "thirdparty/jattach"]
+	path = thirdparty/jattach
+	url = https://github.com/apangin/jattach.git
+[submodule "thirdparty/kissmalloc"]
+	path = thirdparty/kissmalloc
+	url = https://gitlab.com/frankencode/kissmalloc.git

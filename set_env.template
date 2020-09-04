@@ -1,0 +1,10 @@
+export JXPerf_HOME=<your JXPerf home>
+export JAVA_HOME=<your Java home>
+export MAVEN_HOME=<your maven home>
+
+export PATH=$JAVA_HOME/bin:$PATH
+export CPLUS_INCLUDE_PATH=${JAVA_HOME}/include:${JAVA_HOME}/include/linux:$CPLUS_INCLUDE_PATH
+export C_INCLUDE_PATH=${JAVA_HOME}/include:${JAVA_HOME}/include/linux:$C_INCLUDE_PATH
+export PATH=${JAVA_HOME}/bin:${MAVEN_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=$JXPerf_HOME/bin/kissmalloc:$JXPerf_HOME/build/preload:$LD_LIBRARY_PATH
+export JAVA_AGENT=${JXPerf_HOME}/thirdparty/allocation-instrumenter/target/java-allocation-instrumenter-HEAD-SNAPSHOT.jar
