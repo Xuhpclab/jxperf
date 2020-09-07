@@ -9,16 +9,15 @@
 
 #ifdef DEBUG 
 #define ERROR(format, ...) { write(STDERR_FILENO, "ERROR: ", sizeof("ERROR: ")); \
-    print_error(format,  ##__VA_ARGS__);}
+    print_error_or_info(format,  ##__VA_ARGS__);}
 
 #define WARNING(format, ...) { write(STDERR_FILENO, "WARNING: ", sizeof("WARNING: ")); \
-    print_error(format,  ##__VA_ARGS__);}
+    print_error_or_info(format,  ##__VA_ARGS__);}
 
 #define INFO(format, ...) { write(STDOUT_FILENO, "INFO: ", sizeof("INFO: ")); \
-    print_info(format,  ##__VA_ARGS__);}
+    print_error_or_info(format,  ##__VA_ARGS__);}
 
-void print_error(const char *format ,...); 
-void print_info(const char *format ,...); 
+void print_error_or_info(const char *format ,...); 
 
 #else
 #define ERROR(format, ...) ;
