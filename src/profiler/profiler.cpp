@@ -156,13 +156,11 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 #endif
     
 #ifdef ACCURACY_CHECK    
-    bool isSamplePointAccurate = true; 
     void *contextIP = getContextPC(uCtxt);
     if (contextIP != sampleIP) { 
         void *startaddr = nullptr, *endAddr = nullptr; 
         method->getMethodBoundary(&start_addr, &endAddr);
         if (contextIP < startAddr || contextIP > endAddr) {
-            isSamplePointAccurate = false;
             INFO("InAccurate sample: sampleData->ip = %p contextPC = %p\n", sampleIP, contextIP);
         }
     }
