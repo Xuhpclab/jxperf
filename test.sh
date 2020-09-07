@@ -5,9 +5,4 @@ BENCHMARK_DIR="$CUR_DIR"/benchmark/dacapo.jar
 BENCHMARK=lusearch
 
 export LD_PRELOAD="$CUR_DIR"/build/preload/libpreload.so
-java \
-    -javaagent:$JAVA_AGENT \
-    -agentpath:"$JVMTI_AGENT" \
-    -jar \
-    "$BENCHMARK_DIR" \
-    "$BENCHMARK"
+java -javaagent:$JAVA_AGENT -agentpath:"$JVMTI_AGENT" -jar "$BENCHMARK_DIR" "$BENCHMARK"
