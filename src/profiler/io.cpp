@@ -50,9 +50,9 @@ OUTPUT::~OUTPUT(){
 }
 
 bool OUTPUT::setFileName(char *file_name) {
-  if (strlen(_file_name) > 0) return false; //already set
+  if (strnlen(_file_name, sizeof(_file_name)) > 0) return false; //already set
 
-  if (strlen(file_name) >= NAME_BUFFER_SIZE - 1) {
+  if (strnlen(file_name, sizeof(_file_name)) >= NAME_BUFFER_SIZE - 1) {
     ERROR("given file_name exceeds the maximum length\n");
     return false;
   }
@@ -76,7 +76,7 @@ int OUTPUT::writef(const char *fmt, ...) {
 int OUTPUT::writeb(const char *buf) {
   LockScope<SpinLock> lock_scope(&_lock);
   if(_output_buffer.fd < 0) {
-    if (strlen(_file_name) == 0) {
+    if (strnlen(_file_name, sizeof(_file_name)) == 0) {
       ERROR("Please set file name before writing\n");
       return 0;
     } else {
@@ -86,7 +86,7 @@ int OUTPUT::writeb(const char *buf) {
     }
   }
 
-  int data_size = strlen(buf);
+  int data_size = strnlen(buf, sizeof(buf));
   for(int sent_size = 0; sent_size < data_size;) {
     int ret_size = hpcio_outbuf_write(&_output_buffer, buf + sent_size, data_size - sent_size);
     assert(ret_size >= 0);
