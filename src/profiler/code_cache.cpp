@@ -120,9 +120,8 @@ void Method::loadBCILineTable() {
   
 }
 
-CompiledMethod::CompiledMethod(jmethodID method_id, uint32_t version, jint code_size, const void* code_addr):Method(method_id) {
+CompiledMethod::CompiledMethod(jmethodID method_id, uint32_t version, jint code_size, const void* code_addr) : Method(method_id), _code_size(code_size) {
   _version = version;
-  _code_size = code_size;
   _start_addr = (uint64_t)code_addr;
 }
 
