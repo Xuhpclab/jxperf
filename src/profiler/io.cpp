@@ -16,7 +16,7 @@ bool OUTPUT::_openFile() {
     fd = open(_file_name, O_WRONLY | O_CREAT | O_EXCL, 0644);
     if (fd < 0) {
       if (errno == EEXIST) {
-        if (strlen(_file_name) >= NAME_BUFFER_SIZE - 1) {
+        if (strnlen(_file_name, sizeof(_file_name)) >= NAME_BUFFER_SIZE - 1) {
           ERROR("file_name %s exceeds the maximum length\n",_file_name);
           return false;
         }
