@@ -2,7 +2,7 @@
 
 namespace xml {
 
-XMLObj::XMLObj(std::string tag_name){
+XMLObj::XMLObj(const std::string& tag_name){
   _tag_name = tag_name;
 }
 XMLObj::~XMLObj(){
@@ -15,7 +15,7 @@ XMLObj::~XMLObj(){
   }
 }
 
-void XMLObj::addAttr(std::string key, std::string value) {
+void XMLObj::addAttr(const std::string& key, const std::string& value) {
   _attr_map[key] = "\"" + value + "\"";
 }
 
@@ -39,7 +39,7 @@ std::string XMLObj::getXMLStr(uint32_t indent_num) {
   return os.str();
 }
 
-bool XMLObj::hasAttr(std::string key, std::string value) {
+bool XMLObj::hasAttr(const std::string& key, const std::string& value) {
 #ifdef USE_BOOST_UNORDERED_CONTAINER
     boost::unordered_map<std::string, std::string>::const_iterator it = _attr_map.find(key);
 #else
