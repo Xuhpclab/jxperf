@@ -17,14 +17,14 @@ namespace xml {
 
 class XMLObj {
 public:
-  XMLObj(std::string tag_name);
+  XMLObj(const std::string& tag_name);
   ~XMLObj();
  
-  void addAttr(std::string key, std::string value);
+  void addAttr(const std::string& key, const std::string& value);
  
   void addChild(uint32_t id, XMLObj *child);
   std::string getXMLStr(uint32_t indent_num=0);
-  bool hasAttr(std::string key, std::string value);
+  bool hasAttr(const std::string& key, const std::string& value);
 private:
   std::string _tag_name;
   std::map<uint32_t, XMLObj *> _children_map; // the id should be unique
