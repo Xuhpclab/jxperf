@@ -258,9 +258,7 @@ XMLObj * createXMLObj(CompiledMethod *instance){
 }
 
 
-CompiledMethodGroup::CompiledMethodGroup(jmethodID method_id) {
-  _method_id = method_id;
-}
+CompiledMethodGroup::CompiledMethodGroup(jmethodID method_id) : _method_id(method_id) {}
 
 CompiledMethodGroup::~CompiledMethodGroup() {
   for (auto &elem : _address_method_map){
