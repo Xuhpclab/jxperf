@@ -15,7 +15,7 @@ class ThreadWorker(threading.Thread):
 	def run(self):
 		self._work_routine(self._input_data)
 		self._finish_cb(self)
-		
+
 class WorkerManager:
 	def _workerFinish(self, worker):
 		self._lock.acquire()
@@ -37,7 +37,7 @@ class WorkerManager:
 			## ok, the manager will do the job anyway
 			work_routine(input_data)
 			return "Master" 
-	
+
 		worker = ThreadWorker(self._workerFinish)
 		self._active_worker_list.append(worker)
 		self._lock.release()
@@ -45,7 +45,7 @@ class WorkerManager:
 		worker.setWork(work_routine, input_data)
 		worker.start()
 		return worker
-		
+
 	def wait(self, worker_list):
 		for w in worker_list:
 			if w == "Master":
