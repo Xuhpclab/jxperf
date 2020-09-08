@@ -127,12 +127,6 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     
     uint32_t threshold = (metrics::MetricInfoManager::getMetricInfo(metric_id1))->threshold;
 
-    //numa analysis
-    if (clientName.compare(NUMANODE_CLIENT_NAME) == 0) {
-        NumaAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2, metric_id3);
-        return;
-    }
-
     // data-centric analysis
     if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) == 0) {
         DataCentricAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
@@ -193,109 +187,6 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     } else {
         ERROR("Unknown client name: %s or mismatch between the client name: %s and the sampled instruction: %p", clientName.c_str(), clientName.c_str(), sampleIP);
     }
-}
-
-void::Profiler::NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2, int metric_id3) { 
-    void *sampleAddr = (void *)(sampleData->addr);
-    int status[1];
-    int ret_code;
-    status[0] = -1; 
-    ret_code = numa_move_pages(0, 1, &sampleAddr, NULL, status, 0);
-    if (ret_code == -1)
-        return;
-    
-    uint32_t object_numa_node = (uint32_t)status[0];
-    uint32_t sampling_numa_node = sampleData->cpu % 4;
-     
-    void* startaddress;
-	tree_lock.lock();
-	interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)(sampleData->addr), &startaddress);
-	tree_lock.unlock();
-
-#if 0
-    if (object_numa_node == sampling_numa_node)
-        printf("\nEqual! sampling at cpu#: %lu (Reside numa node: %lu); Object Memory at %p is at numa node %lu\n", sampleData->cpu, sampling_numa_node, sampleAddr, object_numa_node);
-    else
-        printf("\nNot equal! sampling at cpu#: %lu (Reside numa node: %lu); Object Memory at %p is at numa node %lu\n", sampleData->cpu, sampling_numa_node, sampleAddr, object_numa_node);
-#endif
-
-	if (p != NULL) {
-		// assert(p->node_ctxt != nullptr);
-        Context *ctxt = p->node_ctxt; 
-		std::stack<Context *> ctxt_stack;
-		
-        while (ctxt != nullptr) {
-			ctxt_stack.push(ctxt);
-            ctxt = ctxt->getParent();
-            //ctxt = nullptr;
-		}
-        
-        #if 1
-		if (!ctxt_stack.empty()) ctxt_stack.pop(); // pop out the root
-		
-		ctxt = nullptr;
-		ContextTree *ctxt_tree = reinterpret_cast<ContextTree *> (TD_GET(context_state));
-		while (!ctxt_stack.empty()) {
-			ContextFrame ctxt_frame = ctxt_stack.top()->getFrame();
-			if (ctxt == nullptr) ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
-			else ctxt = ctxt_tree->addContext(ctxt, ctxt_frame);
-			ctxt_stack.pop();
-		}
-
-		Context *ctxt_allocate = constructContext(_asgct, uCtxt, sampleData->ip, ctxt, method_id, method_version, object_numa_node);
-		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node);
-
-		lock_map.lock();
-		map[ctxt_access] = ctxt_allocate;
-		lock_map.unlock();
-		if (ctxt_allocate != nullptr && sampleData->ip != 0) {
-			metrics::ContextMetrics *metrics = ctxt_allocate->getMetrics();
-			if (metrics == nullptr) {
-				//metrics = new metrics::ContextMetrics();
-                metrics = new metrics::ContextMetrics();
-
-				ctxt_allocate->setMetrics(metrics);
-			}
-			metrics::metric_val_t metric_val;
-			metric_val.i = threshold;
-            
-            if (object_numa_node == sampling_numa_node) {
-			    assert(metrics->increment(metric_id3, metric_val));
-                totalSameNUMA += threshold;
-            } else {
-                assert(metrics->increment(metric_id2, metric_val));
-                totalDiffNUMA += threshold;
-            }
-
-		}
-        #endif
-	} else {
-		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node);
-		lock_map.lock();
-		std::unordered_map<Context*, Context*>::iterator it = map.find(ctxt_access);
-		lock_map.unlock();
-		if (it != map.end()) {
-			Context *ctxt_allocate = it->second;
-			if (ctxt_allocate != nullptr && sampleData->ip != 0) {
-				metrics::ContextMetrics *metrics = ctxt_allocate->getMetrics();
-				if (metrics == nullptr) {
-					metrics = new metrics::ContextMetrics();
-					ctxt_allocate->setMetrics(metrics);
-				}
-				metrics::metric_val_t metric_val;
-				metric_val.i = threshold;
-
-                if (object_numa_node == sampling_numa_node) {
-			        assert(metrics->increment(metric_id3, metric_val));
-                    totalSameNUMA += threshold;
-                } else {
-                    assert(metrics->increment(metric_id2, metric_val));
-                    totalDiffNUMA += threshold;
-                }
-
-			}
-		}
-	}
 }
 
 void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
