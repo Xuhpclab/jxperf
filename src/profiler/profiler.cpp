@@ -127,6 +127,12 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     
     uint32_t threshold = (metrics::MetricInfoManager::getMetricInfo(metric_id1))->threshold;
 
+    //numa analysis
+    if (clientName.compare(NUMANODE_CLIENT_NAME) == 0) {
+        // NumaAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2, metric_id3);
+        return;
+    }
+
     // data-centric analysis
     if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) == 0) {
         DataCentricAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
