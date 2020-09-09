@@ -112,7 +112,6 @@ class MethodManager:
 		new_method.start_addr = "0"
 		new_method.code_size = "0"
 		new_method._addr2line_tree = bintrees.FastRBTree()
-		
 		self.addMethod(new_method)
 		return new_method
 
