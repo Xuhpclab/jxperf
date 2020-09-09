@@ -301,7 +301,6 @@ def main():
 				file.write(row[0]  + "\nFraction: " +  str(round(float(row[-1]) * 100 / l1CacheMisses, 2)) +"%\n")
 		file.write("\nTotal Allocation Times: " + result[0])
 		file.write("\nTotal L1 Cache Misses: " + result[1])
-	
 	elif result and isNuma == True:
 		assert(len(result) == 2)
 		totalEqualityTimes = long(result[0])
