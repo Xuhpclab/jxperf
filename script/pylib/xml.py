@@ -70,7 +70,6 @@ class XMLParser:
 		i2 = file_str.find("?>", i1+1)
 		if i1 >= 0 and i2 > i1:
 			file_str = file_str[i2+2:]
-		
 		self._content = file_str
 		
 		remains = file_str
