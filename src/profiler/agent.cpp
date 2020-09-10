@@ -147,7 +147,7 @@ static void JNICALL callbackException(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthr
 static void JNICALL callbackNativeMethodBind(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread, jmethodID method, void* address, void** new_address_ptr) {
   BLOCK_SAMPLE;
   JvmtiScopedPtr<char> methodName;
-  jvmtiError err = (JVM::jvmti())->GetMethodName( method, methodName.getRef(), NULL, NULL);
+  (JVM::jvmti())->GetMethodName( method, methodName.getRef(), NULL, NULL);
   INFO("callbackNativeMethodBind %s\n", methodName.get());
   UNBLOCK_SAMPLE;
 }
@@ -210,14 +210,13 @@ static void JNICALL callbackGCRelocationReclaim(jvmtiEnv *jvmti_env, const char*
     if (flag != 0) {
       void* new_startingAddr = (void*)new_addr;
       void* old_startingAddr = (void*)old_addr;
-      Context *ctxt;
       uint64_t size = length;
       uint64_t endingAddr = (uint64_t)new_startingAddr + size;
 
       tree_lock.lock();
       interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, old_startingAddr, &startaddress);
       if (p != NULL) {
-        ctxt = p->node_ctxt;
+        Context *ctxt = p->node_ctxt;
         SplayTree::interval_tree_delete(&splay_tree_root, &del_tree, p);
         interval_tree_node *node = SplayTree::node_make(new_startingAddr, (void*)endingAddr, ctxt);
         SplayTree::interval_tree_insert(&splay_tree_root, node);
