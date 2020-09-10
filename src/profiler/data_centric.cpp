@@ -138,9 +138,9 @@ void DataCentric::malloc_hook_function(void *ptr, size_t size) {
 
 
   //Add the allocated range
-  uint64_t start, end;
-  start = (uint64_t) ptr;
-  end = start + size - 1;
+  // uint64_t start, end;
+  // start = (uint64_t) ptr;
+  // end = start + size - 1;
  
   //_allocated_range_set.insert(start, end, last_ctxt);
 
