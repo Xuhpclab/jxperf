@@ -9,9 +9,7 @@ on:
 jobs:
   build:
     env:
-      LD_LIBRARY_PATH: 
-        - ${{ github.workspace }}/bin/kissmalloc
-        - ${{ github.workspace }}/build/preload
+      LD_LIBRARY_PATH: ${{ github.workspace }}/bin/kissmalloc
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -21,3 +19,5 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8  
+    - name: build
+      run: .github/action_scripts/make.sh
