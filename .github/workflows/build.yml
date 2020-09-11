@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     env:
-      working-directory: ${{ github.workspace }}
+      LD_LIBRARY_PATH: ${{ github.workspace }}/bin/kissmalloc
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
