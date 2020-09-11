@@ -19,4 +19,4 @@ jobs:
         java-version: 1.8
     - name: Set up environment
       env: 
-        LD_LIBRARY_PATH: ${{ github.workspace }}/bin/kissmalloc
+        LD_LIBRARY_PATH: ./bin/kissmalloc
