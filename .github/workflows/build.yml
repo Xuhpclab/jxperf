@@ -17,3 +17,5 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
+    - name: Set up environment
+      run: source .github/action_scripts/set_env
