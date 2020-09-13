@@ -11,3 +11,4 @@ cd $DIR/../../thirdparty/bintrees &&  python setup.py install --user
 cd $DIR/../../thirdparty/allocation-instrumenter && mvn package -DskipTests
 mkdir $DIR/../../build/preload
 cd $DIR/../../preload && make
+#cd $DIR/../../src && make
