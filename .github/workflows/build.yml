@@ -20,6 +20,6 @@ jobs:
       with:
         java-version: 1.8
     - name: numa
-      run: apt-get install libnuma-dev
+      run: sudo apt-get install libnuma-dev
     - name: build
       run: .github/action_scripts/make.sh
