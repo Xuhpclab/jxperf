@@ -30,7 +30,21 @@ Java inefficiency detection tool based on CPU performance monitoring counters an
 $ make
 ```
 
-#### 2. Uninstallation
+#### 3. Uninstallation
 ```console
 $ make clean
+```
+
+## Usage
+
+### Linux
+
+#### 1. To run dead store detection
+* **Start Profiler**
+```console
+$ LD_PRELOAD=$JXPerf_HOME/build/libpreload.so java -agentpath:$JXPerf_HOME/build/libagent.so=DeadStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@<sampling rate> -cp <classpath> <java program>
+```
+* **Generate profiling results "agent-data"**
+```console
+$ python $JXPerf_HOME/script/process_raw_data.py
 ```
