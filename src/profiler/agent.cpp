@@ -324,13 +324,13 @@ bool JVM::init(JavaVM *jvm, const char *arg, bool attach) {
   //capa.can_generate_native_method_bind_events = 1;
   capa.can_generate_compiled_method_load_events = 1;
 
-    capa.can_generate_all_class_hook_events = 1;
-    capa.can_retransform_classes = 1;
-    capa.can_retransform_any_class = 1;
-    capa.can_get_bytecodes = 1;
-    capa.can_get_constant_pool = 1;
-    capa.can_generate_monitor_events = 1;
-    capa.can_tag_objects = 1;
+  capa.can_generate_all_class_hook_events = 1;
+  capa.can_retransform_classes = 1;
+  capa.can_retransform_any_class = 1;
+  capa.can_get_bytecodes = 1;
+  capa.can_get_constant_pool = 1;
+  capa.can_generate_monitor_events = 1;
+  capa.can_tag_objects = 1;
 
   error = _jvmti->AddCapabilities(&capa);
   check_jvmti_error(error, "Unable to get necessary JVMTI capabilities.");
