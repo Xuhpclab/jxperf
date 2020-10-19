@@ -117,3 +117,7 @@ We tested our tool on following platforms.
 |-----------------------|
 | JDK 8 & later         |
 | OpenJDK 8 & later     |
+
+## License
+
+JXPerf is released under the [MIT License](http://www.opensource.org/licenses/MIT).
