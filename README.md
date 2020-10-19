@@ -96,3 +96,22 @@ $ python $JXPerf_HOME/script/process_raw_data.py
 ```console
 $ ./run_attach.sh <pid> <running time in seconds>
 ```
+
+## Support Platforms
+
+We tested our tool on following platforms.
+
+### Linux
+
+| CPU                               | Systems           | Kernel         | Architecture |
+|-----------------------------------|-------------------|----------------|--------------|
+| Intel(R) Xeon(R) CPU E5-2650 v4   | Ubuntu 14.04.6    | Linux 5.1.0    | x86_64       |
+| Intel(R) Xeon(R) CPU E5-2699 v3   | Ubuntu 18.04.3    | Linux 5.4.6    | x86_64       |
+| Intel(R) Xeon(R) CPU E7-4830 v4   | CentOS Linux 7    | Linux 3.10.0   | x86_64       |
+
+### JDK
+
+| JDK Versions          |
+|-----------------------|
+| JDK 8 & later         |
+| OpenJDK 8 & later     |
