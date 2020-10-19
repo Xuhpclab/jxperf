@@ -88,7 +88,7 @@ $ python $JXPerf_HOME/script/process_raw_data.py
 
 #### 5. Attach to a running JVM
 * Open run_attach.sh and change MODE to one of below modes:
-  * DataCentric::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@<sampling rate>
+  * DataCentric::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@`<sampling rate>`
   * DeadStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@<sampling rate>
   * SilentStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@<sampling rate>
   * SilentLoad::MEM_UOPS_RETIRED:ALL_LOADS:precise=2@<sampling rate>
