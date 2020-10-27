@@ -309,7 +309,7 @@ bool JVM::init(JavaVM *jvm, const char *arg, bool attach) {
   }
 
   /////////////////////
-  // Init capabilities:··
+  // Init capabilities:
   jvmtiCapabilities capa;
   memset(&capa, '\0', sizeof(jvmtiCapabilities));
   //capa.can_signal_thread = 1;
