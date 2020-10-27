@@ -94,7 +94,7 @@ $ python $JXPerf_HOME/script/process_raw_data.py
     -   DeadStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@sampling_rate
     -   SilentStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@sampling_rate
     -   SilentLoad::MEM_UOPS_RETIRED:ALL_LOADS:precise=2@sampling_rate
-* **Start Profiler**
+-   **Start Profiler**
 ```console
 $ ./run_attach.sh <pid> <running time in seconds>
 ```
