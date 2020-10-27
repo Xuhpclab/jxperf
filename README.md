@@ -78,10 +78,10 @@ $ LD_PRELOAD=$JXPerf_HOME/build/libpreload.so java -javaagent:$JAVA_AGENT -agent
 ```console
 $ python $JXPerf_HOME/script/process_raw_data.py
 ```
-* The "agent_data" includes two metrics: "Allocation Times" and "L1 Cache Misses"
-  * The metric "Allocation Times" reports allocation times for every object, which is represented with the object allocation site
-  * The metric "L1 Cache Misses" reports a pair of calling context (i.e., <allocation site, access site>) for every object incurring L1 cache misses
-  * To analyze memory bloat
+-   The "agent_data" includes two metrics: "Allocation Times" and "L1 Cache Misses"
+  -     The metric "Allocation Times" reports allocation times for every object, which is represented with the object allocation site
+  -     The metric "L1 Cache Misses" reports a pair of calling context (i.e., <allocation site, access site>) for every object incurring L1 cache misses
+  -     To analyze memory bloat
     * Identify the objects suffering from high L1 cache misses by looking into the metric "L1 Cache Misses"
     * Check whether these objects have high allocation times by looking into the metric "Allocation Times"
     * The objects having both high L1 cache misses and allocation times are primary optimization candidates
