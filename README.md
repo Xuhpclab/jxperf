@@ -8,11 +8,11 @@ Java inefficiency detection tool based on CPU performance monitoring counters an
 
 ## Contents
 
-  - [Installation](#installation)
-  - [Usage](#usage)
-  - [Support Platforms](#support-platforms)
-  - [Support JDK Versions](#support-jdk-versions)
-  - [License](#license)
+-  [Installation](#installation)
+-  [Usage](#usage)
+-  [Support Platforms](#support-platforms)
+-  [Support JDK Versions](#support-jdk-versions)
+-  [License](#license)
 
 ## Installation
 
