@@ -47,6 +47,7 @@ uint64_t grandTotAllocTimes = 0;
 uint64_t grandTotSameNUMA = 0;
 uint64_t grandTotDiffNUMA = 0;
 uint64_t grandTotL1Cachemiss = 0;
+uint64_t grandTotGenericCounter = 0;
 
 
 thread_local uint64_t totalWrittenBytes = 0;
@@ -60,6 +61,7 @@ thread_local uint64_t totalAllocTimes = 0;
 thread_local uint64_t totalSameNUMA = 0;
 thread_local uint64_t totalDiffNUMA = 0;
 thread_local uint64_t totalL1Cachemiss = 0;
+thread_local uint64_t totalGenericCounter = 0;
 
 
 thread_local void *prevIP = (void *)0;
@@ -74,12 +76,11 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
     Context *last_ctxt = ctxt;
 
     ASGCT_CallFrame frames[MAX_FRAME_NUM];
-    // ASGCT_CallTrace trace = {JVM::jni(), 0, frames};
     ASGCT_CallTrace trace;
     trace.frames = frames;
     trace.env_id = JVM::jni();
     asgct(&trace, MAX_FRAME_NUM, uCtxt); 
-    
+
     for (int i = trace.num_frames - 1 ; i >= 0; i--) {
         // TODO: We need to consider how to include the native method.
         ContextFrame ctxt_frame;
@@ -114,7 +115,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     void *sampleIP = (void *)(sampleData->ip);
     void *sampleAddr = (void *)(sampleData->addr); 
 
-    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0) {
+    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0) {
         if (!IsValidAddress(sampleIP, sampleAddr)) return;
     }
 
@@ -136,6 +137,12 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     // data-centric analysis
     if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) == 0) {
         DataCentricAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
+        return;
+    }
+
+    // generic analysis
+    if (clientName.compare(GENERIC) == 0) {
+        GenericAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
         return;
     }
 
@@ -193,6 +200,21 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     } else {
         ERROR("Unknown client name: %s or mismatch between the client name: %s and the sampled instruction: %p", clientName.c_str(), clientName.c_str(), sampleIP);
     }
+}
+
+void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
+    Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
+    if (ctxt_access != nullptr && sampleData->ip != 0) {
+		metrics::ContextMetrics *metrics = ctxt_access->getMetrics();
+		if (metrics == nullptr) {
+			metrics = new metrics::ContextMetrics();
+			ctxt_access->setMetrics(metrics);
+		}
+		metrics::metric_val_t metric_val;
+		metric_val.i = 1;
+		assert(metrics->increment(metric_id2, metric_val));
+        totalGenericCounter += 1;
+	}
 }
 
 void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
@@ -588,6 +610,7 @@ void Profiler::init() {
 
     _statistics_file.open("agent-statistics.run");
     ThreadData::thread_data_init();
+    
     assert(PerfManager::processInit(JVM::getArgument()->getPerfEventList(), Profiler::OnSample));
     assert(WP_Init());
     std::string client_name = GetClientName();
@@ -623,6 +646,7 @@ void Profiler::threadStart() {
     totalSameNUMA = 0;
     totalDiffNUMA = 0;
     totalL1Cachemiss = 0;
+    totalGenericCounter = 0;
 
     ThreadData::thread_data_alloc();
     ContextTree *ct_tree = new(std::nothrow) ContextTree();
@@ -651,7 +675,9 @@ void Profiler::threadStart() {
     if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
     else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
     else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
-    else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0) { 
+    // else if (clientName.compare(GENERIC) == 0)
+        // printf("current mode is CPU time\n");
+    else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0) { 
         ERROR("Can't decode client %s", clientName.c_str());
         assert(false);
     }
@@ -661,8 +687,32 @@ void Profiler::threadStart() {
 
 
 void Profiler::threadEnd() {
-    PerfManager::closeEvents();
-    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0) {
+
+#if 0
+    ucontext_t context, *cp = &context;
+    getcontext(cp);
+    Context *ctxt = cputime_constructContext(_asgct, (void*)cp);
+
+    jvmtiEnv* env;
+    jlong nanos_ptr;
+    jvmtiError error = JVM::_jvmti->GetCurrentThreadCpuTime(&nanos_ptr);
+    long time = (long) nanos_ptr;
+    std::cout << time << std::endl;
+
+	metrics::ContextMetrics *metrics = ctxt->getMetrics();
+	if (metrics == nullptr) {
+		metrics = new metrics::ContextMetrics();
+		ctxt->setMetrics(metrics);
+	}
+	metrics::metric_val_t metric_val; 
+	metric_val.i = time;
+	assert(metrics->increment(0, metric_val));
+	totalGenericCounter += time;
+#endif
+
+    if (clientName.compare(GENERIC) != 0)
+        PerfManager::closeEvents();
+    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0) {
         WP_ThreadTerminate();
     }
     ContextTree *ctxt_tree = reinterpret_cast<ContextTree *>(TD_GET(context_state));
@@ -724,7 +774,7 @@ void Profiler::threadEnd() {
         }
     }
 
-    ThreadData::thread_data_dealloc();
+    ThreadData::thread_data_dealloc(clientName);
 
     __sync_fetch_and_add(&grandTotWrittenBytes, totalWrittenBytes);
     __sync_fetch_and_add(&grandTotLoadedBytes, totalLoadedBytes);
@@ -737,6 +787,7 @@ void Profiler::threadEnd() {
     __sync_fetch_and_add(&grandTotSameNUMA, totalSameNUMA);
     __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
     __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss);
+    __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter); 
 }
 
 
@@ -770,5 +821,8 @@ void Profiler::output_statistics() {
         _statistics_file << clientName << std::endl;
         _statistics_file << grandTotSameNUMA << std::endl;
         _statistics_file << grandTotDiffNUMA << std::endl;
+    } else if (clientName.compare(GENERIC) == 0) {
+        _statistics_file << clientName << std::endl;
+        _statistics_file << grandTotGenericCounter << std::endl;
     }
 }

@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <setjmp.h>
+#include "profiler_support.h"
 
 namespace ThreadData {
 
@@ -28,7 +29,7 @@ thread_data_t *thread_data_alloc();
 
 thread_data_t *thread_data_get();
 
-void thread_data_dealloc();
+void thread_data_dealloc(std::string clientName);
 
 void thread_data_shutdown();
 

@@ -119,7 +119,7 @@ bool process_event_list(const std::vector<std::string> &event_list){
             assert(false);
         }
         std::string client_name = event.substr(0, pos);
-	boost::to_upper(client_name);
+	    boost::to_upper(client_name);
 
         std::size_t pos2 = event.find("@");
         if(pos2 != std::string::npos) { // found "@"
@@ -138,12 +138,12 @@ bool process_event_list(const std::vector<std::string> &event_list){
         // encode the event
         if (!perf_encode_event(current_event_info.name, &(current_event_info.attr))){
             ERROR("Can't encode %s", current_event_info.name.c_str());
-            assert(false);
+            //assert(false);
         }
         // setup other generic attributes
         if (!perf_attr_init(&(current_event_info.attr), current_event_info.threshold, PERF_SAMPLE_TID)){
             ERROR("Can't init attribute for event %s", current_event_info.name.c_str());
-            assert(false);
+            //assert(false);
         }
 
         //create the corresponding metric
@@ -236,7 +236,9 @@ void perf_event_handler(int sig, siginfo_t* siginfo, void* context){
     
     ErrnoIR err_storage;
     std::vector<perf_event_thread_t> *event_thread_list = reinterpret_cast<std::vector<perf_event_thread_t> *> (TD_GET(perf_state));
-    assert(event_thread_list);
+    // assert(event_thread_list);
+    if (event_thread_list == nullptr)
+        return;
 
     //------------------------------------------------------------
     // disable all counters
