@@ -37,11 +37,12 @@ thread_data_t *thread_data_get() {
     return ret;
 } 
 
-void thread_data_dealloc() {
+void thread_data_dealloc(std::string clientName) {
     thread_data_t *td_ptr = (thread_data_t*) pthread_getspecific(key);
     assert (td_ptr != nullptr);
     // make sure each field is properly freed
-    assert(td_ptr->perf_state == nullptr);
+    if (clientName.compare(GENERIC) != 0)
+        assert(td_ptr->perf_state == nullptr);
     assert(td_ptr->context_state == nullptr);
 #ifndef COUNT_OVERHEAD 
     assert(td_ptr->output_state == nullptr);

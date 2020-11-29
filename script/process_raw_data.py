@@ -8,6 +8,7 @@ from functools import partial
 ##global variables
 isDataCentric = False
 isNuma = False
+isGeneric = False
 
 g_thread_context_dict = dict()
 g_method_dict = dict()
@@ -210,11 +211,15 @@ def main():
 
 	global isDataCentric
 	global isNuma
+	global isGeneric
 	if result[0] == 'DATACENTRIC':
 		isDataCentric = True
 		result = result[1:]
 	elif result[0] == 'NUMA':
 		isNuma = True
+		result = result[1:]
+	elif result[0] == 'GENERIC':
+		isGeneric = True
 		result = result[1:]
 
 	### read all agent trace files
@@ -258,7 +263,7 @@ def main():
 
 	file = open("agent-data", "w")
 
-	if result and isDataCentric == False and isNuma == False:
+	if result and isDataCentric == False and isNuma == False and isGeneric == False:
 		assert(len(result) == 3 or len(result) == 4)
 		deadOrRedBytes = long(result[1])
 
@@ -316,6 +321,14 @@ def main():
 			file.write(row[0] + "\n\nFraction of Mismatch: " + str(round(float(inequalityTimes) * 100 / totalInequalityMismatches, 2)) + "%;" + " Match Times: " + str(equalityTimes) + " Mismatch Times: " + str(inequalityTimes) + " Match Percentage: " + str(round(float(equalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%;" + " Mismatch Percentage: " + str(round(float(inequalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%\n")
 		file.write("\nTotal Match Times: " + result[0])
 		file.write("\nTotal Mismatch Times: " + result[1])
+	elif result and isGeneric == True:
+		file.write("-----------------------Generic Counter------------------------------\n")
+
+		rows = sorted(dump_data.items(), key=lambda x: x[-1], reverse = True)
+
+		for row in rows:
+			file.write(row[0] + "\n\nGeneric Counter: " + str(float(row[-1])) +"\n")
+		file.write("\nTotal Generic Counter: " + result[0])
 
 	file.close()
 
