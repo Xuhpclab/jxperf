@@ -322,7 +322,6 @@ def main():
 		file.write("\nTotal Match Times: " + result[0])
 		file.write("\nTotal Mismatch Times: " + result[1])
 	elif result and isGeneric == True:
-		totalGenericCounter = long(result[0])
 		file.write("-----------------------Generic Counter------------------------------\n")
 
 		rows = sorted(dump_data.items(), key=lambda x: x[-1], reverse = True)
