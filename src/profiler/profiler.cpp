@@ -128,9 +128,9 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     
     uint32_t threshold = (metrics::MetricInfoManager::getMetricInfo(metric_id1))->threshold;
 
-    //numa analysis
-    if (clientName.compare(NUMANODE_CLIENT_NAME) == 0) {
-        // NumaAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2, metric_id3);
+    // generic analysis
+    if (clientName.compare(GENERIC) == 0) {
+        GenericAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
         return;
     }
 
@@ -140,9 +140,9 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
         return;
     }
 
-    // generic analysis
-    if (clientName.compare(GENERIC) == 0) {
-        GenericAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
+    //numa analysis
+    if (clientName.compare(NUMANODE_CLIENT_NAME) == 0) {
+        NumaAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2, metric_id3);
         return;
     }
 
@@ -229,7 +229,7 @@ void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, 
 		std::stack<Context *> ctxt_stack;
 		while (ctxt != nullptr) {
 			ctxt_stack.push(ctxt);
-		ctxt = ctxt->getParent();
+		    ctxt = ctxt->getParent();
 		}
 
 		if (!ctxt_stack.empty()) ctxt_stack.pop(); // pop out the root
@@ -277,6 +277,103 @@ void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, 
 				metric_val.i = threshold;
 				assert(metrics->increment(metric_id2, metric_val));
 				totalL1Cachemiss += threshold;
+			}
+		}
+	}
+}
+
+void::Profiler::NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2, int metric_id3) { 
+    void *sampleAddr = (void *)(sampleData->addr);
+    int status[1];
+    int ret_code;
+    status[0] = -1; 
+    ret_code = numa_move_pages(0, 1, &sampleAddr, NULL, status, 0);
+    if (ret_code == -1)
+        return;
+    
+    uint32_t object_numa_node = (uint32_t)status[0];
+    uint32_t sampling_numa_node = sampleData->cpu % 4;
+     
+    void* startaddress;
+	tree_lock.lock();
+	interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)(sampleData->addr), &startaddress);
+	tree_lock.unlock();
+
+#if 0
+    if (object_numa_node == sampling_numa_node)
+        printf("\nEqual! sampling at cpu#: %lu (Reside numa node: %lu); Object Memory at %p is at numa node %lu\n", sampleData->cpu, sampling_numa_node, sampleAddr, object_numa_node);
+    else
+        printf("\nNot equal! sampling at cpu#: %lu (Reside numa node: %lu); Object Memory at %p is at numa node %lu\n", sampleData->cpu, sampling_numa_node, sampleAddr, object_numa_node);
+#endif
+
+	if (p != NULL) {
+		// assert(p->node_ctxt != nullptr);
+        Context *ctxt = p->node_ctxt; 
+		std::stack<Context *> ctxt_stack;
+        while (ctxt != nullptr) {
+			ctxt_stack.push(ctxt);
+            ctxt = ctxt->getParent();
+		}
+        
+		if (!ctxt_stack.empty()) ctxt_stack.pop(); // pop out the root
+		
+		ctxt = nullptr;
+		ContextTree *ctxt_tree = reinterpret_cast<ContextTree *> (TD_GET(context_state));
+		while (!ctxt_stack.empty()) {
+			ContextFrame ctxt_frame = ctxt_stack.top()->getFrame();
+			if (ctxt == nullptr) ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
+			else ctxt = ctxt_tree->addContext(ctxt, ctxt_frame);
+			ctxt_stack.pop();
+		}
+
+		Context *ctxt_allocate = constructContext(_asgct, uCtxt, sampleData->ip, ctxt, method_id, method_version, object_numa_node);
+		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node);
+
+		lock_map.lock();
+		map[ctxt_access] = ctxt_allocate;
+		lock_map.unlock();
+		if (ctxt_allocate != nullptr && sampleData->ip != 0) {
+			metrics::ContextMetrics *metrics = ctxt_allocate->getMetrics();
+			if (metrics == nullptr) {
+                metrics = new metrics::ContextMetrics();
+				ctxt_allocate->setMetrics(metrics);
+			}
+			metrics::metric_val_t metric_val;
+			metric_val.i = threshold;
+            
+            if (object_numa_node == sampling_numa_node) {
+			    assert(metrics->increment(metric_id3, metric_val));
+                totalSameNUMA += threshold;
+            } else {
+                assert(metrics->increment(metric_id2, metric_val));
+                totalDiffNUMA += threshold;
+            }
+
+		}
+	} else {
+		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node);
+		lock_map.lock();
+		std::unordered_map<Context*, Context*>::iterator it = map.find(ctxt_access);
+		lock_map.unlock();
+		if (it != map.end()) {
+			Context *ctxt_allocate = it->second;
+			if (ctxt_allocate != nullptr && sampleData->ip != 0) {
+				metrics::ContextMetrics *metrics = ctxt_allocate->getMetrics();
+				if (metrics == nullptr) {
+					metrics = new metrics::ContextMetrics();
+					ctxt_allocate->setMetrics(metrics);
+				}
+				metrics::metric_val_t metric_val;
+				metric_val.i = threshold;
+
+                if (object_numa_node == sampling_numa_node) {
+			        assert(metrics->increment(metric_id3, metric_val));
+                    totalSameNUMA += threshold;
+                } else {
+                    assert(metrics->increment(metric_id2, metric_val));
+                    totalDiffNUMA += threshold;
+                }
+
 			}
 		}
 	}
@@ -675,8 +772,6 @@ void Profiler::threadStart() {
     if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
     else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
     else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
-    // else if (clientName.compare(GENERIC) == 0)
-        // printf("current mode is CPU time\n");
     else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0) { 
         ERROR("Can't decode client %s", clientName.c_str());
         assert(false);
@@ -687,29 +782,6 @@ void Profiler::threadStart() {
 
 
 void Profiler::threadEnd() {
-
-#if 0
-    ucontext_t context, *cp = &context;
-    getcontext(cp);
-    Context *ctxt = cputime_constructContext(_asgct, (void*)cp);
-
-    jvmtiEnv* env;
-    jlong nanos_ptr;
-    jvmtiError error = JVM::_jvmti->GetCurrentThreadCpuTime(&nanos_ptr);
-    long time = (long) nanos_ptr;
-    std::cout << time << std::endl;
-
-	metrics::ContextMetrics *metrics = ctxt->getMetrics();
-	if (metrics == nullptr) {
-		metrics = new metrics::ContextMetrics();
-		ctxt->setMetrics(metrics);
-	}
-	metrics::metric_val_t metric_val; 
-	metric_val.i = time;
-	assert(metrics->increment(0, metric_val));
-	totalGenericCounter += time;
-#endif
-
     if (clientName.compare(GENERIC) != 0)
         PerfManager::closeEvents();
     if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0) {

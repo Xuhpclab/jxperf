@@ -6,7 +6,6 @@
 #include <fstream>
 #include <vector>
 #include <thread>
-#include <jvmti.h>
 #include "perf_interface.h"
 #include "stacktraces.h"
 #include "code_cache.h"
@@ -43,10 +42,10 @@ private:
   static WP_TriggerAction_t OnRedStoreWatchPoint(WP_TriggerInfo_t *wpi);
   static WP_TriggerAction_t OnRedLoadWatchPoint(WP_TriggerInfo_t *wpi);
   static WP_TriggerAction_t DetectRedundancy(WP_TriggerInfo_t *wpi, jmethodID method_id, uint32_t method_version, std::string client_name);
-  static void NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2, int metric_id3);
-  static void DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2);
   static void GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2);
-  
+  static void DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2);
+  static void NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2, int metric_id3);
+
   inline void output_statistics(); 
 
   std::ofstream _method_file;
