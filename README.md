@@ -88,7 +88,22 @@ $ python $JXPerf_HOME/script/process_raw_data.py
         -   Check whether these objects have high allocation times by looking into the metric "Allocation Times"
         -   The objects having both high L1 cache misses and allocation times are primary optimization candidates
 
-#### 5. Attach to a running JVM
+#### 5. To run NUMA locality analysis
+-   **Start Profiler**
+```console
+$ $ LD_PRELOAD=$JXPerf_HOME/build/libpreload.so java -javaagent:$JAVA_AGENT -agentpath:$JXPerf_HOME/build/libagent.so=Numa::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@<sampling rate> -cp <classpath> <java program>
+```
+-   **Generate profiling results "agent-data"**
+```console
+$ python $JXPerf_HOME/script/process_raw_data.py
+```
+-   The "agent_data" includes:
+    -   "Fraction of Mismatch": mismatch times of one object over the total mismatch times of whole program
+    -   "Match Times" and "Mismatch Times": the match and mismatch times of one object
+    -   "Match Percentage": Match Times / (Match Times + Mismatch Times)
+    -   "Mismatch Percentage": Mismatch Times / (Match Times + Mismatch Times)
+
+#### 6. Attach to a running JVM
 -   Open run_attach.sh and change MODE to one of below modes:
     -   DataCentric::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@sampling_rate
     -   DeadStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@sampling_rate
