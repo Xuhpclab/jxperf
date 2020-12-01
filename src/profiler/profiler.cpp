@@ -66,9 +66,6 @@ thread_local uint64_t totalGenericCounter = 0;
 
 thread_local void *prevIP = (void *)0;
 
-// thread_local uint64_t sampleCnt = 0;
-// uint64_t totalSampleCnt = 0;
-
 namespace {
 
 Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctxt, jmethodID method_id, uint32_t method_version, uint32_t object_numa_node) {
