@@ -41,7 +41,7 @@ void thread_data_dealloc(std::string clientName) {
     thread_data_t *td_ptr = (thread_data_t*) pthread_getspecific(key);
     assert (td_ptr != nullptr);
     // make sure each field is properly freed
-    if (clientName.compare(GENERIC) != 0)
+    if (clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0)
         assert(td_ptr->perf_state == nullptr);
     assert(td_ptr->context_state == nullptr);
 #ifndef COUNT_OVERHEAD 

@@ -9,6 +9,7 @@ from functools import partial
 isDataCentric = False
 isNuma = False
 isGeneric = False
+isHeap = False
 
 g_thread_context_dict = dict()
 g_method_dict = dict()
@@ -212,6 +213,7 @@ def main():
 	global isDataCentric
 	global isNuma
 	global isGeneric
+	global isheap
 	if result[0] == 'DATACENTRIC':
 		isDataCentric = True
 		result = result[1:]
@@ -221,6 +223,8 @@ def main():
 	elif result[0] == 'GENERIC':
 		isGeneric = True
 		result = result[1:]
+	elif result[0] == 'HEAP':
+		isHeap = True
 
 	### read all agent trace files
 	tid_file_dict = get_all_files(".")
@@ -263,7 +267,7 @@ def main():
 
 	file = open("agent-data", "w")
 
-	if result and isDataCentric == False and isNuma == False and isGeneric == False:
+	if result and isDataCentric == False and isNuma == False and isGeneric == False and isHeap == False:
 		assert(len(result) == 3 or len(result) == 4)
 		deadOrRedBytes = long(result[1])
 
@@ -310,25 +314,32 @@ def main():
 		assert(len(result) == 2)
 		totalEqualityTimes = long(result[0])
 		totalInequalityMismatches = long(result[1])
-
-		rows = sorted(dump_data.items(), key=lambda x: x[-1], reverse = True)
-
-		for row in rows:
-			inequalityTimes = row[-1]
-			equalityTimes = 0
-			if dump_data2.has_key(row[0]):
-				equalityTimes = dump_data2[row[0]]
-			file.write(row[0] + "\n\nFraction of Mismatch: " + str(round(float(inequalityTimes) * 100 / totalInequalityMismatches, 2)) + "%;" + " Match Times: " + str(equalityTimes) + " Mismatch Times: " + str(inequalityTimes) + " Match Percentage: " + str(round(float(equalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%;" + " Mismatch Percentage: " + str(round(float(inequalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%\n")
+		if (totalInequalityMismatches != 0):
+			rows = sorted(dump_data.items(), key=lambda x: x[-1], reverse = True)
+			for row in rows:
+				inequalityTimes = row[-1]
+				equalityTimes = 0
+				if dump_data2.has_key(row[0]):
+					equalityTimes = dump_data2[row[0]]
+				file.write(row[0] + "\n\nFraction of Mismatch: " + str(round(float(inequalityTimes) * 100 / totalInequalityMismatches, 2)) + "%;" + " Match Times: " + str(equalityTimes) + " Mismatch Times: " + str(inequalityTimes) + " Match Percentage: " + str(round(float(equalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%;" + " Mismatch Percentage: " + str(round(float(inequalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%\n")
 		file.write("\nTotal Match Times: " + result[0])
 		file.write("\nTotal Mismatch Times: " + result[1])
-	elif result and isGeneric == True:
+	elif isGeneric == True:
 		file.write("-----------------------Generic Counter------------------------------\n")
 
 		rows = sorted(dump_data.items(), key=lambda x: x[-1], reverse = True)
 
 		for row in rows:
-			file.write(row[0] + "\n\nGeneric Counter: " + str(float(row[-1])) +"\n")
-		file.write("\nTotal Generic Counter: " + result[0])
+			if row[0] != "":
+				file.write(row[0] + "\n\nGeneric Counter: " + str(float(row[-1])) +"\n")
+	elif isHeap == True:
+		file.write("-----------------------Heap Analysis------------------------------\n")
+
+		rows = sorted(dump_data.items(), key=lambda x: x[-1], reverse = True)
+
+		for row in rows:
+			if row[0] != "":
+				file.write(row[0] + "\n\nObject allocation size: " + str(row[-1]) +"bytes\n")
 
 	file.close()
 

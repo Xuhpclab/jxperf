@@ -114,10 +114,10 @@ bool process_event_list(const std::vector<std::string> &event_list){
         const std::string &event = event_list[i];
         //find the client name, event name and the period
         std::size_t pos = event.find("::");
-        if(pos == std::string::npos) { // not found
-            ERROR("Can't get client name");
-            assert(false);
-        }
+        // if(pos == std::string::npos) { // not found
+        //     ERROR("Can't get client name");
+        //     assert(false);
+        // }
         std::string client_name = event.substr(0, pos);
 	    boost::to_upper(client_name);
 
