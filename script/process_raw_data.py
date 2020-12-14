@@ -213,7 +213,7 @@ def main():
 	global isDataCentric
 	global isNuma
 	global isGeneric
-	global isheap
+	global isHeap
 	if result[0] == 'DATACENTRIC':
 		isDataCentric = True
 		result = result[1:]
