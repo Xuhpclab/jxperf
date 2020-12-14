@@ -24,12 +24,59 @@
 /* Used to revert back to the original signal blocking setting */
 #define UNBLOCK_SAMPLE (TD_GET(inside_agent) = false)
 
+#define MAX_FRAME_NUM (128)
+
 JavaVM* JVM::_jvm = nullptr;
 jvmtiEnv* JVM::_jvmti = nullptr;
 Argument* JVM::_argument = nullptr;
 
 extern SpinLock tree_lock;
 extern interval_tree_node *splay_tree_root;
+
+namespace {
+	Context *heap_analysis_constructContext(ASGCT_FN asgct, void *context, std::string client_name, int64_t obj_size){
+    ASGCT_CallTrace trace;
+    ASGCT_CallFrame frames[MAX_FRAME_NUM];
+    
+    trace.frames = frames;
+    trace.env_id = JVM::jni();
+    
+    asgct(&trace, MAX_FRAME_NUM, context);
+    
+    ContextTree *ctxt_tree = reinterpret_cast<ContextTree *> (TD_GET(context_state));
+    if(ctxt_tree == nullptr) return nullptr;
+    
+    Context *last_ctxt = nullptr;
+        
+    for(int i=trace.num_frames - 1 ; i >= 0; i--) {
+        ContextFrame ctxt_frame;
+        ctxt_frame = frames[i]; // set method_id and bci
+        
+        if (last_ctxt == nullptr) last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
+        else last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame);
+    }
+
+    ContextFrame ctxt_frame;
+    ctxt_frame.bci = -65536;
+    if (last_ctxt == nullptr)
+        last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
+    else
+        last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame);       
+
+    if (client_name.compare(HEAP) == 0) {
+      metrics::ContextMetrics *metrics = last_ctxt->getMetrics();
+      if (metrics == nullptr) {
+        metrics = new metrics::ContextMetrics();
+        last_ctxt->setMetrics(metrics);
+      }
+        metrics::metric_val_t metric_val;
+      metric_val.i = obj_size;
+      assert(metrics->increment(1, metric_val)); 
+    }
+
+    return last_ctxt;
+}
+}
 
 
 void JVM::parseArgs(const char *arg) {
@@ -52,6 +99,14 @@ static void createJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass) {
   }
 }
 
+// Heap usage analysis
+static void JNICALL SampledObjectAlloc(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread, jobject object, jclass object_klass, jlong size) {
+  int64_t obj_size = size;
+  std::string client_name = GetClientName();
+  ucontext_t context, *cp = &context;
+  getcontext(cp);
+  Context *ctxt = heap_analysis_constructContext(Profiler::_asgct, (void*)cp, client_name, obj_size);
+}
 
 /**
 * VM init callback
@@ -331,6 +386,7 @@ bool JVM::init(JavaVM *jvm, const char *arg, bool attach) {
   capa.can_get_constant_pool = 1;
   capa.can_generate_monitor_events = 1;
   capa.can_tag_objects = 1;
+  capa.can_generate_sampled_object_alloc_events = 1;
 
   error = _jvmti->AddCapabilities(&capa);
   check_jvmti_error(error, "Unable to get necessary JVMTI capabilities.");
@@ -338,6 +394,7 @@ bool JVM::init(JavaVM *jvm, const char *arg, bool attach) {
   //////////////////
   // Init callbacks:
   memset(&callbacks, 0, sizeof(callbacks));
+  callbacks.SampledObjectAlloc = &SampledObjectAlloc;
   callbacks.VMInit = &callbackVMInit;
   callbacks.VMDeath = &callbackVMDeath;
   callbacks.ThreadStart = &callbackThreadStart;
@@ -357,8 +414,14 @@ bool JVM::init(JavaVM *jvm, const char *arg, bool attach) {
 
   error = _jvmti->SetEventCallbacks(&callbacks, (jint)sizeof(callbacks));
   check_jvmti_error(error, "Cannot set jvmti callbacks");
+
+  error = _jvmti->SetHeapSamplingInterval(1024 * 1024);
+  check_jvmti_error(error, "Cannot set interval");
+
   ///////////////
   // Init events:
+  error = _jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_SAMPLED_OBJECT_ALLOC, NULL);
+  check_jvmti_error(error, "Cannot set event notification");
   error = _jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, (jthread)NULL);
   check_jvmti_error(error, "Cannot set event notification");
   error = _jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_DEATH, (jthread)NULL);

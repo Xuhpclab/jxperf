@@ -47,7 +47,6 @@ uint64_t grandTotAllocTimes = 0;
 uint64_t grandTotSameNUMA = 0;
 uint64_t grandTotDiffNUMA = 0;
 uint64_t grandTotL1Cachemiss = 0;
-uint64_t grandTotGenericCounter = 0;
 
 
 thread_local uint64_t totalWrittenBytes = 0;
@@ -68,7 +67,7 @@ thread_local void *prevIP = (void *)0;
 
 namespace {
 
-Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctxt, jmethodID method_id, uint32_t method_version, uint32_t object_numa_node) {
+Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctxt, jmethodID method_id, uint32_t method_version, int object_numa_node) {
     ContextTree *ctxt_tree = reinterpret_cast<ContextTree *> (TD_GET(context_state));
     Context *last_ctxt = ctxt;
 
@@ -112,7 +111,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     void *sampleIP = (void *)(sampleData->ip);
     void *sampleAddr = (void *)(sampleData->addr); 
 
-    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0) {
+    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0) {
         if (!IsValidAddress(sampleIP, sampleAddr)) return;
     }
 
@@ -288,9 +287,11 @@ void::Profiler::NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmetho
     if (ret_code == -1)
         return;
     
-    uint32_t object_numa_node = (uint32_t)status[0];
-    uint32_t sampling_numa_node = sampleData->cpu % 4;
-     
+    int object_numa_node = (uint32_t)status[0];
+    int sampling_numa_node = numa_node_of_cpu(sampleData->cpu);
+    if (sampling_numa_node == -1) 
+        return;
+
     void* startaddress;
 	tree_lock.lock();
 	interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)(sampleData->addr), &startaddress);
@@ -298,9 +299,9 @@ void::Profiler::NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmetho
 
 #if 0
     if (object_numa_node == sampling_numa_node)
-        printf("\nEqual! sampling at cpu#: %lu (Reside numa node: %lu); Object Memory at %p is at numa node %lu\n", sampleData->cpu, sampling_numa_node, sampleAddr, object_numa_node);
+        printf("\nEqual! sampling at cpu#: %lu (Reside numa node: %lu); Object Memory at %p is at numa node %d\n", sampleData->cpu, sampling_numa_node, sampleAddr, object_numa_node);
     else
-        printf("\nNot equal! sampling at cpu#: %lu (Reside numa node: %lu); Object Memory at %p is at numa node %lu\n", sampleData->cpu, sampling_numa_node, sampleAddr, object_numa_node);
+        printf("\nNot equal! sampling at cpu#: %lu (Reside numa node: %lu); Object Memory at %p is at numa node %d\n", sampleData->cpu, sampling_numa_node, sampleAddr, object_numa_node);
 #endif
 
 	if (p != NULL) {
@@ -345,7 +346,6 @@ void::Profiler::NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmetho
                 assert(metrics->increment(metric_id2, metric_val));
                 totalDiffNUMA += threshold;
             }
-
 		}
 	} else {
 		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node);
@@ -769,7 +769,7 @@ void Profiler::threadStart() {
     if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
     else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
     else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
-    else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0) { 
+    else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0) { 
         ERROR("Can't decode client %s", clientName.c_str());
         assert(false);
     }
@@ -779,9 +779,9 @@ void Profiler::threadStart() {
 
 
 void Profiler::threadEnd() {
-    if (clientName.compare(GENERIC) != 0)
+    if (clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0)
         PerfManager::closeEvents();
-    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0) {
+    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0) {
         WP_ThreadTerminate();
     }
     ContextTree *ctxt_tree = reinterpret_cast<ContextTree *>(TD_GET(context_state));
@@ -855,8 +855,7 @@ void Profiler::threadEnd() {
     __sync_fetch_and_add(&grandTotAllocTimes, totalAllocTimes);
     __sync_fetch_and_add(&grandTotSameNUMA, totalSameNUMA);
     __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
-    __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss);
-    __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter); 
+    __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
 }
 
 
@@ -892,6 +891,7 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotDiffNUMA << std::endl;
     } else if (clientName.compare(GENERIC) == 0) {
         _statistics_file << clientName << std::endl;
-        _statistics_file << grandTotGenericCounter << std::endl;
+    } else if (clientName.compare(HEAP) == 0) {
+        _statistics_file << clientName << std::endl;
     }
 }

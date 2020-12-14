@@ -7,6 +7,7 @@
 #include <string>
 #include "argument.h"
 #include "debug.h"
+#include "ucontext.h"
 
 
 class JVM {

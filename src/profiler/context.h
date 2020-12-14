@@ -18,7 +18,7 @@ public:
 
 // fields
    uint64_t binary_addr = 0;
-   uint32_t numa_node = 10; 
+   int numa_node = 10; 
 
    jmethodID method_id = 0;
    std::string method_name;
