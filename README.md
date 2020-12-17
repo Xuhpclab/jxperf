@@ -103,7 +103,27 @@ $ python $JXPerf_HOME/script/process_raw_data.py
     -   "Match Percentage": Match Times / (Match Times + Mismatch Times)
     -   "Mismatch Percentage": Mismatch Times / (Match Times + Mismatch Times)
 
-#### 6. Attach to a running JVM
+#### 6. To run with generic PMU events
+-   **Start Profiler**
+```console
+$ LD_PRELOAD=$JXPerf_HOME/build/libpreload.so java -agentpath:$JXPerf_HOME/build/libagent.so=Generic::PMU_Events:precise=2@<sampling rate> -cp <classpath> <java program>
+```
+-   **Generate profiling results "agent-data"**
+```console
+$ python $JXPerf_HOME/script/process_raw_data.py
+```
+
+#### 7. To run heap profiling
+-   **Start Profiler**
+```console
+$ LD_PRELOAD=$JXPerf_HOME/build/libpreload.so java -agentpath:$JXPerf_HOME/build/libagent.so=Heap -cp <classpath> <java program>
+```
+-   **Generate profiling results "agent-data"**
+```console
+$ python $JXPerf_HOME/script/process_raw_data.py
+```
+
+#### 8. Attach to a running JVM
 -   Open run_attach.sh and change MODE to one of below modes:
     -   DataCentric::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@sampling_rate
     -   DeadStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@sampling_rate
