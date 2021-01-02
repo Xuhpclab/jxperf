@@ -153,7 +153,7 @@ def output_to_file(method_manager, context_manager, dump_data, dump_data2):
 	 		i = 0
 			while i < len(ctxt_list):
 				if ctxt_list[i].metrics_dict:
-					key = "\n".join(intpr.getSrcPosition(c, isDataCentric) for c in ctxt_list[:i])
+					key = "\n".join(intpr.getSrcPosition(c) for c in ctxt_list[:i])
 					if ctxt_list[i].metrics_type == "ALLOCTIMES" and accessed.has_key(key) == False:
 						accessed[key] = True
 						if dump_data.has_key(key):

@@ -9,7 +9,7 @@ class Interpreter:
 		self._method_manager = method_manager
 		self._context_manager = context_manager
 
-	def getSrcPosition(self, context, isDataCentric=False, isNuma=True):
+	def getSrcPosition(self, context):
 		## include [method name], [source file] and [source lineno]
 		## the source_file and source_lineno should indicate where the method is called.. I mean it is related to the parent
 		
@@ -59,10 +59,10 @@ class Interpreter:
 			node = ""
 
 
-		if context.bci == "-65536" and isDataCentric:
+		if context.bci == "-65535":
 			return "***********************Access to the object above***********************"
-		elif context.bci == "-65536" and isNuma:
-			return "***********************Access to the object above***********************"
+		# elif context.bci == "-65536" and isNuma:
+		# 	return "***********************Access to the object above***********************"
 		elif context.bci == "-65536":
 			return "*********************************REDUNDANT WITH*********************************"
 		elif class_name == "Root":
