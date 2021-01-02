@@ -95,9 +95,9 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
     ctxt_frame.method_id = method_id;
     ctxt_frame.method_version = method_version;
     // It's sort of tricky. Use bci to split a context pair.
-    if (ctxt == nullptr) ctxt_frame.bci = -65536;
+    if (ctxt == nullptr && last_ctxt != nullptr) ctxt_frame.bci = -65536;
     if (last_ctxt != nullptr) last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame);
-    else last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
+    // else last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
     
     return last_ctxt;
 }

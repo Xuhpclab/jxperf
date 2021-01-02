@@ -37,7 +37,7 @@ namespace {
     }
 
     ContextFrame ctxt_frame;
-    ctxt_frame.bci = -65536;
+    ctxt_frame.bci = -65535;
     if (last_ctxt == nullptr)
         last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
     else
