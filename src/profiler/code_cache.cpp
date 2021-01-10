@@ -197,6 +197,14 @@ int32_t CompiledMethod::addr2line(const uint64_t addr) {
   return line;
 }
 
+int32_t CompiledMethod::startLine() {
+  int32_t line = 0;
+  if (_addr2line_rangeset.isEmpty()) // the address has not been set
+    return -1;
+  _addr2line_rangeset.getData(_start_addr, line);
+  return line;
+}
+
 void CompiledMethod:: getMethodBoundary(void **start_addr, void **end_addr) {
     *start_addr = (void *)_start_addr;
     *end_addr = (void *)(_start_addr + _code_size - 1);
@@ -212,6 +220,7 @@ XMLObj * createXMLObj(CompiledMethod *instance){
   SET_ATTR(obj, "id",instance->getMethodID());
   SET_ATTR(obj, "version", instance->_version);
   SET_ATTR(obj, "code_size", instance->_code_size);
+  SET_ATTR(obj, "start_line", instance->startLine());
   SET_ATTR(obj, "start_addr", instance->_start_addr);  
   SET_ATTR(obj, "name", instance->getMethodName().c_str());
   SET_ATTR(obj, "file", instance->getSourceFile().c_str());
@@ -333,6 +342,7 @@ xml::XMLObj *InterpretMethod::createXMLObj() {
   SET_ATTR(obj, "id",getMethodID());
   SET_ATTR(obj, "version", 0);
   SET_ATTR(obj, "code_size", 0);
+  SET_ATTR(obj, "start_line", -1);
   SET_ATTR(obj, "start_addr", 0);  
   SET_ATTR(obj, "name", getMethodName().c_str());
   SET_ATTR(obj, "file", getSourceFile().c_str());

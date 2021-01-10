@@ -210,6 +210,111 @@ def output_to_file(method_manager, context_manager, dump_data, dump_data2):
                     else:
                         dump_data2[key] = (ctxt_list[-1].metrics_dict["value"])
 
+def output_to_buff(method_manager, context_manager):
+        intpr = interpreter.Interpreter(method_manager, context_manager)
+    # if isDataCentric:
+    #     accessed = dict()
+    #     for ctxt_list in context_manager.getAllPaths("0", "root-leaf"):#"root-subnode"):
+    #         i = 0
+    #         while i < len(ctxt_list):
+    #             if ctxt_list[i].metrics_dict:
+    #                 key = "\n".join(intpr.getSrcPosition(c) for c in ctxt_list[:i])
+    #                 print(key)
+    #                 # if ctxt_list[i].metrics_type == "ALLOCTIMES" and (key in accessed) == False:
+    #                 #     accessed[key] = True
+    #                 #     if key in dump_data:
+    #                 #         dump_data[key] += (ctxt_list[i].metrics_dict["value"])
+    #                 #     else:
+    #                 #         dump_data[key] = (ctxt_list[i].metrics_dict["value"])
+    #                 # elif ctxt_list[i].metrics_type == "L1CACHEMISSES":
+    #                 #     if key in dump_data2:
+    #                 #         dump_data2[key] += (ctxt_list[i].metrics_dict["value"])
+    #                 #     else:
+    #                 #         dump_data2[key] = (ctxt_list[i].metrics_dict["value"])
+    #             i += 1
+    # elif isNuma:
+    #     for ctxt_list in context_manager.getAllPaths("0", "root-leaf"):#"root-subnode"):
+    #         print(ctxt_list)
+    # else:
+        # trace = []
+        # context_manager.getFirstTrace("0", trace)
+
+        rtraces = context_manager.getAllRtrace("0")
+        print(len(rtraces))
+
+        profile = profile_pb2.Profile()
+
+        sample_type = profile.sample_type.add()
+        profile.string_table.append("")
+        profile.string_table.append("type")
+        sample_type.type = len(profile.string_table) - 1
+        profile.string_table.append("unit")
+        sample_type.unit = len(profile.string_table) - 1
+
+        location_id = 1
+        function_id = 1
+        for rtrace in rtraces:
+            location = profile.location.add()
+            location.id = location_id
+
+            sample = profile.sample.add()
+            sample.location_id.append(location_id)
+            sample.value.append(1)
+            location_id += 1
+            
+            print(len(rtrace))
+            for trace_node in rtrace:
+                if trace_node.id != 0:
+                    key = intpr.getInterpreter_Context(trace_node)
+                    print(key.ctype)
+                    if key.ctype == 0:
+                        print("root")
+                    elif key.ctype == 1:
+                        if key.source_lineno == "??":
+                            key.source_lineno = -1
+                        if key.method_start_line == "??":
+                            key.method_start_line = -1
+                        function = profile.function.add()
+                        function.id = function_id
+                        profile.string_table.append(key.method_name)
+                        function.name = len(profile.string_table) - 1
+
+                        profile.string_table.append("/Users/dolan/Desktop/test/gui/ObjectLayout/ObjectLayout/src/main/java/"+ key.source_file)
+                        function.filename = len(profile.string_table) - 1
+                        function.start_line = int(key.method_start_line)
+
+                        line = location.line.add()
+                        line.function_id = function_id
+                        line.line = int(key.source_lineno)
+
+                        function_id += 1
+                        print("class_name:",key.class_name)
+                        print("method_name:",key.method_name)
+                        print("source_file:",key.source_file)
+                        print("source_lineno:",key.source_lineno)
+                    else:
+                        print("break")
+                    
+                    print("-----------------")
+            
+        f = open("jxperf.pprof", "wb")
+        f.write(profile.SerializeToString())
+        f.close()
+        # for ctxt_list in context_manager.getAllPaths("0", "root-leaf"):#"root-subnode"):
+        #     if ctxt_list[-1].metrics_dict:
+        #         key = "\n".join(intpr.getSrcPosition(c) for c in ctxt_list[:-1])
+        #         print(key)
+                # if ctxt_list[-1].metrics_type == "INT":
+                #     if key in dump_data:
+                #         dump_data[key] += (ctxt_list[-1].metrics_dict["value"])
+                #     else:
+                #         dump_data[key] = (ctxt_list[-1].metrics_dict["value"])
+                # elif ctxt_list[-1].metrics_type == "FP":
+                #     if key in dump_data2:
+                #         dump_data2[key] += (ctxt_list[-1].metrics_dict["value"])
+                #     else:
+                #         dump_data2[key] = (ctxt_list[-1].metrics_dict["value"])
+
 def main():
     file = open("agent-statistics.run", "r")
     result = file.read().splitlines()
@@ -268,86 +373,87 @@ def main():
         print("Reconstructing contexts from TID " + tid)
         xml_root = xml_root_dict[tid]
         print("Dumping contexts from TID "+tid)
-        output_to_file(method_manager, load_context(xml_root), dump_data, dump_data2)
+        # output_to_file(method_manager, load_context(xml_root), dump_data, dump_data2)
+        output_to_buff(method_manager, load_context(xml_root))
         break
 
-    file = open("agent-data", "w")
+    # file = open("agent-data", "w")
 
-    if result and isDataCentric == False and isNuma == False and isGeneric == False and isHeap == False:
-        assert(len(result) == 3 or len(result) == 4)
-        deadOrRedBytes = int(result[1])
+    # if result and isDataCentric == False and isNuma == False and isGeneric == False and isHeap == False:
+    #     assert(len(result) == 3 or len(result) == 4)
+    #     deadOrRedBytes = int(result[1])
 
-        if len(result) == 4 and float(result[2]) != 0.:
-            file.write("-----------------------Precise Redundancy------------------------------\n")
+    #     if len(result) == 4 and float(result[2]) != 0.:
+    #         file.write("-----------------------Precise Redundancy------------------------------\n")
 
-        rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
-        for row in rows:
-            file.write(row[0] + "\n\nFraction: " + str(round(float(row[-1]) * 100 / deadOrRedBytes, 2)) +"%\n")
+    #     rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
+    #     for row in rows:
+    #         file.write(row[0] + "\n\nFraction: " + str(round(float(row[-1]) * 100 / deadOrRedBytes, 2)) +"%\n")
 
-        if len(result) == 4 and float(result[3]) != 0.:
-            file.write("\n----------------------Approximate Redundancy---------------------------\n")
+    #     if len(result) == 4 and float(result[3]) != 0.:
+    #         file.write("\n----------------------Approximate Redundancy---------------------------\n")
 
-            rows = sorted(list(dump_data2.items()), key=lambda x: x[-1], reverse = True)
-            for row in rows:
-                file.write(row[0]  + "\n\nFraction: " +  str(round(float(row[-1]) * 100 / deadOrRedBytes, 2)) +"%\n")
+    #         rows = sorted(list(dump_data2.items()), key=lambda x: x[-1], reverse = True)
+    #         for row in rows:
+    #             file.write(row[0]  + "\n\nFraction: " +  str(round(float(row[-1]) * 100 / deadOrRedBytes, 2)) +"%\n")
 
-        file.write("\nTotal Bytes: " + result[0])
-        file.write("\nTotal Redundant Bytes: " + result[1])
-        if len(result) == 4:
-            file.write("\nTotal Redundancy Fraction: " + str(round((float(result[2]) + float(result[3])) * 100, 2)) + "%")
-        else:
-            file.write("\nTotal Redundancy Fraction: " + str(round(float(result[2]) * 100, 2)) + "%")
-    elif result and isDataCentric == True:
-        assert(len(result) == 2)
-        allocTimes = int(result[0])
-        l1CacheMisses = int(result[1])
-        if allocTimes != 0:
-            file.write("-----------------------Allocation Times------------------------------\n")
+    #     file.write("\nTotal Bytes: " + result[0])
+    #     file.write("\nTotal Redundant Bytes: " + result[1])
+    #     if len(result) == 4:
+    #         file.write("\nTotal Redundancy Fraction: " + str(round((float(result[2]) + float(result[3])) * 100, 2)) + "%")
+    #     else:
+    #         file.write("\nTotal Redundancy Fraction: " + str(round(float(result[2]) * 100, 2)) + "%")
+    # elif result and isDataCentric == True:
+    #     assert(len(result) == 2)
+    #     allocTimes = int(result[0])
+    #     l1CacheMisses = int(result[1])
+    #     if allocTimes != 0:
+    #         file.write("-----------------------Allocation Times------------------------------\n")
 
-            rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
-            for row in rows:
-                file.write(row[0] + "\n\nFraction: " + str(round(float(row[-1]) * 100 / allocTimes, 2)) +"%\n")
+    #         rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
+    #         for row in rows:
+    #             file.write(row[0] + "\n\nFraction: " + str(round(float(row[-1]) * 100 / allocTimes, 2)) +"%\n")
 
-        if l1CacheMisses != 0:
-            file.write("\n-----------------------L1 Cache Misses------------------------------\n")
+    #     if l1CacheMisses != 0:
+    #         file.write("\n-----------------------L1 Cache Misses------------------------------\n")
 
-            rows = sorted(list(dump_data2.items()), key=lambda x: x[-1], reverse = True)
-            for row in rows:
-                file.write(row[0]  + "\nFraction: " +  str(round(float(row[-1]) * 100 / l1CacheMisses, 2)) +"%\n")
-        file.write("\nTotal Allocation Times: " + result[0])
-        file.write("\nTotal L1 Cache Misses: " + result[1])
-    elif result and isNuma == True:
-        assert(len(result) == 2)
-        totalEqualityTimes = int(result[0])
-        totalInequalityMismatches = int(result[1])
-        if (totalInequalityMismatches != 0):
-            rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
-            for row in rows:
-                inequalityTimes = row[-1]
-                equalityTimes = 0
-                if row[0] in dump_data2:
-                    equalityTimes = dump_data2[row[0]]
-                file.write(row[0] + "\n\nFraction of Mismatch: " + str(round(float(inequalityTimes) * 100 / totalInequalityMismatches, 2)) + "%;" + " Match Times: " + str(equalityTimes) + " Mismatch Times: " + str(inequalityTimes) + " Match Percentage: " + str(round(float(equalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%;" + " Mismatch Percentage: " + str(round(float(inequalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%\n")
-        file.write("\nTotal Match Times: " + result[0])
-        file.write("\nTotal Mismatch Times: " + result[1])
-    elif isGeneric == True:
-        file.write("-----------------------Generic Counter------------------------------\n")
+    #         rows = sorted(list(dump_data2.items()), key=lambda x: x[-1], reverse = True)
+    #         for row in rows:
+    #             file.write(row[0]  + "\nFraction: " +  str(round(float(row[-1]) * 100 / l1CacheMisses, 2)) +"%\n")
+    #     file.write("\nTotal Allocation Times: " + result[0])
+    #     file.write("\nTotal L1 Cache Misses: " + result[1])
+    # elif result and isNuma == True:
+    #     assert(len(result) == 2)
+    #     totalEqualityTimes = int(result[0])
+    #     totalInequalityMismatches = int(result[1])
+    #     if (totalInequalityMismatches != 0):
+    #         rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
+    #         for row in rows:
+    #             inequalityTimes = row[-1]
+    #             equalityTimes = 0
+    #             if row[0] in dump_data2:
+    #                 equalityTimes = dump_data2[row[0]]
+    #             file.write(row[0] + "\n\nFraction of Mismatch: " + str(round(float(inequalityTimes) * 100 / totalInequalityMismatches, 2)) + "%;" + " Match Times: " + str(equalityTimes) + " Mismatch Times: " + str(inequalityTimes) + " Match Percentage: " + str(round(float(equalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%;" + " Mismatch Percentage: " + str(round(float(inequalityTimes) * 100 / (equalityTimes + inequalityTimes), 2)) + "%\n")
+    #     file.write("\nTotal Match Times: " + result[0])
+    #     file.write("\nTotal Mismatch Times: " + result[1])
+    # elif isGeneric == True:
+    #     file.write("-----------------------Generic Counter------------------------------\n")
 
-        rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
+    #     rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
 
-        for row in rows:
-            if row[0] != "":
-                file.write(row[0] + "\n\nGeneric Counter: " + str(float(row[-1])) +"\n")
-    elif isHeap == True:
-        file.write("-----------------------Heap Analysis------------------------------\n")
+    #     for row in rows:
+    #         if row[0] != "":
+    #             file.write(row[0] + "\n\nGeneric Counter: " + str(float(row[-1])) +"\n")
+    # elif isHeap == True:
+    #     file.write("-----------------------Heap Analysis------------------------------\n")
 
-        rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
+    #     rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
 
-        for row in rows:
-            if row[0] != "":
-                file.write(row[0] + "\n\nObject allocation size: " + str(row[-1]) +"bytes\n")
+    #     for row in rows:
+    #         if row[0] != "":
+    #             file.write(row[0] + "\n\nObject allocation size: " + str(row[-1]) +"bytes\n")
 
-    file.close()
+    # file.close()
 
     print("Final dumping")
 

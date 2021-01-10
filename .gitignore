@@ -1,8 +1,16 @@
 build/
 scratch/
+script/pylib/*.bak
 script/pylib/*.pyc
+script/pylib/__pycache__/*.pyc
 set_env
 agent-data
 thirdparty/watchpoint-lib/src/libwatchpoint.a
 thirdparty/watchpoint-lib/src/watchpoint_mmap.o
 thirdparty/watchpoint-lib/src/watchpoint.o
+*.run*
+.vscode/
+test.sh
+*.pprof
+*.log
+*.jar

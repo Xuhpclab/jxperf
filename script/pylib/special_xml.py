@@ -1,8 +1,8 @@
 
 import re
-import workers
-import Queue
-import xml
+from . import workers
+import queue
+from . import xml
 import threading
 import time
 
@@ -41,7 +41,7 @@ class HomoXMLParser:
 				self._root_lock.acquire()
 				self._root.addChild(level_node_xml_obj)
 				self._root_lock.release()
-			except Queue.Empty:
+			except queue.Empty:
 				## may sleep a little bit?
 				time.sleep(0.001)
 
@@ -51,7 +51,7 @@ class HomoXMLParser:
 		self._open_tag_pattern = re.compile(r'<'+level_one_node)
 		self._close_tag_pattern = re.compile(r'</'+level_one_node+'>')
 
-		self._level_one_str_queue = Queue.Queue()
+		self._level_one_str_queue = queue.Queue()
 		self._producer_work_done = False
 
 		#strip the header if any

@@ -1,6 +1,6 @@
 
 import re
-import workers
+from . import workers
 
 ##The XML file does not support content.. All the data must be included in attributes. Of course, you still can have children
 ##NOTES:
