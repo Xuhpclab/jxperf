@@ -62,10 +62,12 @@ XMLObj *createXMLObj(ContextMetrics * instance) {
 
         if (metric_val.i) {
             SET_ATTR(child_obj, "value1", metric_val.i);
+            SET_ATTR(child_obj, "value2", -1);
             // assert(child_obj->hasAttr("type", "FP") == false);
             // SET_ATTR(child_obj, "type1", "PRECISE");
         }   
         if (metric_val.r) {
+            SET_ATTR(child_obj, "value1", -1);
             SET_ATTR(child_obj, "value2", metric_val.r);
             // assert(child_obj->hasAttr("type", "INT") == false);
             // SET_ATTR(child_obj, "type2", "APPROXIMATE");

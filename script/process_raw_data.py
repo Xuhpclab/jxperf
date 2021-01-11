@@ -6,6 +6,9 @@ from pylib import *
 from multiprocessing.dummy import Pool as ThreadPool
 from functools import partial
 
+import re
+import xml.etree.ElementTree as ET
+
 ##global variables
 isDataCentric = False
 isNuma = False
@@ -30,14 +33,6 @@ def get_all_files(directory):
             ret_dict[tid].append(os.path.join(directory, f))
     return ret_dict
 
-def parse_input_file(file_path, level_one_node_tag):
-    print(("parsing", file_path))
-    with open(file_path) as f:
-        contents = f.read()
-        #print contents
-    parser = special_xml.HomoXMLParser(level_one_node_tag, contents)
-    return parser.getVirtualRoot()
-
 def remove_all_files(directory):
     files = [f for f in os.listdir(directory) if os.path.isfile(
         os.path.join(directory, f))]
@@ -47,108 +42,154 @@ def remove_all_files(directory):
         elif f.startswith("agent-statistics") and f.find(".run"):
             os.remove(f)
 
+def thread_parse_input_file(input_data):
+    tid = input_data[0]
+    file_name = input_data[1]
+    xml_root_dict = input_data[2]
+    print("parsing ", file_name)
+    with open(file_name) as f:
+        xml = f.read()
+    tree = ET.fromstring(re.sub(r"(<\?xml[^>]+\?>)", r"<root>", xml) + "</root>")
+    if len(tree) != 0:
+        xml_root_dict[tid] = tree;
+    # print(tree.getchildren().tag)
+
+def parse_input_files(directory):
+    ### read all agent trace files
+    tid_file_dict = get_all_files(directory)
+
+    work_manager = workers.WorkerManager()
+    xml_root_dict = dict()
+    for tid in tid_file_dict:
+        for file_name in tid_file_dict[tid]:
+            work_manager.assignWork(thread_parse_input_file, [tid, file_name, xml_root_dict])
+    work_manager.finish()
+    return xml_root_dict
+
 def load_method(method_root):
     method_manager = code_cache.MethodManager()
-    for m_xml in method_root.getChildren():
-        m = code_cache.Method(m_xml.getAttr("id"),m_xml.getAttr("version"))
+    for m_xml in method_root:
+        m = code_cache.Method(m_xml.get("id"),m_xml.get("version"))
         ## set fields
-        m.start_line = m_xml.getAttr("start_line")
-        m.file = m_xml.getAttr("file")
-        m.start_addr = m_xml.getAttr("start_addr")
-        m.code_size = m_xml.getAttr("code_size")
-        m.method_name = m_xml.getAttr("name")
-        m.class_name = m_xml.getAttr("class")
+        m.start_line = m_xml.get("start_line")
+        m.file = m_xml.get("file")
+        m.start_addr = m_xml.get("start_addr")
+        m.code_size = m_xml.get("code_size")
+        m.method_name = m_xml.get("name")
+        m.class_name = m_xml.get("class")
 
         ## add children; currently addr2line mapping and bci2line mapping
         addr2line_xml = None
         bci2line_xml = None
-        for c_xml in m_xml.getChildren():
-            if c_xml.name() == "addr2line":
+        for c_xml in m_xml:
+            if c_xml.get("type") == "addr2line":
                 assert(not addr2line_xml)
                 addr2line_xml = c_xml
-            elif c_xml.name() == "bci2line":
+            elif c_xml.get("type") == "bci2line":
                 assert(not bci2line_xml)
                 bci2line_xml = c_xml
         if addr2line_xml:
-            for range_xml in addr2line_xml.getChildren():
-                assert(range_xml.name() == "range")
-                start = range_xml.getAttr("start")
-                end = range_xml.getAttr("end")
-                lineno = range_xml.getAttr("data")
+            for range_xml in addr2line_xml:
+                assert(range_xml.tag == "range")
+                start = range_xml.get("start")
+                end = range_xml.get("end")
+                lineno = range_xml.get("data")
 
                 m.addAddr2Line(start,end,lineno)
 
         if bci2line_xml:
-            for range_xml in bci2line_xml.getChildren():
-                assert(range_xml.name() == "range")
-                start = range_xml.getAttr("start")
-                end = range_xml.getAttr("end")
-                lineno = range_xml.getAttr("data")
+            for range_xml in bci2line_xml:
+                assert(range_xml.tag == "range")
+                start = range_xml.get("start")
+                end = range_xml.get("end")
+                lineno = range_xml.get("data")
 
                 m.addBCI2Line(start,end,lineno)
 
         method_manager.addMethod(m)
     return method_manager
 
-
 def load_context(context_root):
     context_manager = context.ContextManager()
-    print("It has ", len(context_root.getChildren()), " contexts")
-    for ctxt_xml in context_root.getChildren():
-
-        ctxt = context.Context(ctxt_xml.getAttr("id"))
+    # print("It has ", len(context_root), " contexts")
+    for ctxt_xml in context_root :
+        ctxt = context.Context(ctxt_xml.get("id"))
         # set fields
-        ctxt.method_version = ctxt_xml.getAttr("method_version")
-        ctxt.binary_addr = ctxt_xml.getAttr("binary_addr")
-        ctxt.numa_node = ctxt_xml.getAttr("numa_node")
-        ctxt.method_id = ctxt_xml.getAttr("method_id")
-        ctxt.bci = ctxt_xml.getAttr("bci")
-        ctxt.setParentID(ctxt_xml.getAttr("parent_id"))
+        ctxt.method_version = ctxt_xml.get("method_version")
+        ctxt.binary_addr = ctxt_xml.get("binary_addr")
+        ctxt.numa_node = ctxt_xml.get("numa_node")
+        ctxt.method_id = ctxt_xml.get("method_id")
+        ctxt.bci = ctxt_xml.get("bci")
+        ctxt.setParentID(ctxt_xml.get("parent_id"))
 
         metrics_xml = None
-        for c_xml in ctxt_xml.getChildren():
-            if c_xml.name() == "metrics":
+        for c_xml in ctxt_xml:
+            if c_xml.tag == "metrics":
                 assert(not metrics_xml)
                 metrics_xml = c_xml
         if metrics_xml:
-            for c_xml in metrics_xml.getChildren():
-                attr_dict = c_xml.getAttrDict()
-                id = attr_dict["id"]
+            for c_xml in metrics_xml:
+                id = c_xml.get("id")
                 if isDataCentric:
-                    if id == "0" and "value1" in attr_dict:
-                        ctxt.metrics_dict["value"] = attr_dict["value1"]
+                    if id == "0":
+                        ctxt.metrics_dict["value"] = c_xml.get("value1")
                         ctxt.metrics_type = "ALLOCTIMES"
-                    if id == "1" and "value1" in attr_dict:
-                        ctxt.metrics_dict["value"] = attr_dict["value1"]
+                    if id == "1":
+                        ctxt.metrics_dict["value"] = c_xml.get("value1")
                         ctxt.metrics_type = "L1CACHEMISSES"
                 elif isNuma:
-                    if id == "1" and "value1" in attr_dict:
-                        ctxt.metrics_dict["equality"] = attr_dict["value1"]
+                    if id == "1":
+                        ctxt.metrics_dict["equality"] = c_xml.get("value1")
                         ctxt.metrics_type = "ALWAYS_EQUAL"
-                    if id == "2" and "value1" in attr_dict:
-                        ctxt.metrics_dict["inequality"] = attr_dict["value1"]
+                    if id == "2":
+                        ctxt.metrics_dict["inequality"] = c_xml.get("value1")
                         if "equality" in ctxt.metrics_dict:
                             ctxt.metrics_type = "EQUAL_AND_INEQUAL"
                         else:
                             ctxt.metrics_type = "ALWAYS_INEQUAL"
                 else:
-                    if "value1" in attr_dict:
-                        assert(not("value2" in attr_dict))
-                        ctxt.metrics_dict["value"] = attr_dict["value1"]
+                    if c_xml.get("value2") == "-1":
+                        ctxt.metrics_dict["value"] = c_xml.get("value1")
                         ctxt.metrics_type = "INT"
-                    if "value2" in attr_dict:
-                        assert(not("value1" in attr_dict))
-                        ctxt.metrics_dict["value"] = attr_dict["value2"]
+                    if c_xml.get("value1") == "-1":
+                        ctxt.metrics_dict["value"] = c_xml.get["value2"]
                         ctxt.metrics_type = "FP"
 
         ## add it to context manager
         context_manager.addContext(ctxt)
     roots = context_manager.getRoots()
-    print("remaining roots: ", str([r.id for r in roots]))
+    # print("remaining roots: ", str([r.id for r in roots]))
     assert(len(roots) == 1)
     context_manager.getRoots()
     context_manager.populateMetrics()
     return context_manager
+
+def thread_load_method(input_data):
+    manager_dict = input_data[0]
+    method_root = input_data[1]
+    print("load methods")
+    manager_dict["method"] = load_method(method_root)
+
+def thread_load_context(input_data):
+    manager_dict = input_data[0]
+    tid = input_data[1]
+    context_root = input_data[2]
+    # print("Reconstructing contexts from TID " + tid)
+    print("load context TID " + tid)
+    manager_dict[tid] = load_context(context_root)
+    # print("Dumping contexts from TID "+tid)
+
+def init_manager_dict(xml_root_dict):
+    manager_dict = dict()
+
+    work_manager = workers.WorkerManager()
+    for tid in xml_root_dict:
+        if tid == "method":
+            work_manager.assignWork(thread_load_method, [manager_dict, xml_root_dict[tid]])
+        else:
+            work_manager.assignWork(thread_load_context, [manager_dict, tid, xml_root_dict[tid]])
+    work_manager.finish()
+    return manager_dict
 
 def output_to_file(method_manager, context_manager, dump_data, dump_data2):
     intpr = interpreter.Interpreter(method_manager, context_manager)
@@ -232,44 +273,14 @@ def main():
         isHeap = True
 
     ### read all agent trace files
-    tid_file_dict = get_all_files(".")
-
-    ### each file may have two kinds of information
-    # 1. context; 2. code
-    # the code information should be shared global while the context information is on a per-thread basis.
-    xml_root_dict = dict()
-    for tid in tid_file_dict:
-        root = xml.XMLObj("root")
-        if tid == "method":
-            level_one_node_tag = "method"
-        else:
-            level_one_node_tag = "context"
-
-        for f in tid_file_dict[tid]:
-            new_root = parse_input_file(f, level_one_node_tag)
-            root.addChildren(new_root.getChildren())
-        if len(root.getChildren()) > 0:
-            xml_root_dict[tid] = root
-
-    ### reconstruct method
-    print("start to load methods")
-    method_root = xml_root_dict["method"]
-    method_manager = load_method(method_root)
-    print("Finished loading methods")
-
-    print("Start to output")
+    manager_dict = init_manager_dict(parse_input_files("."))
 
     dump_data = dict()
     dump_data2 = dict()
-
-    for tid in xml_root_dict:
+    for tid in manager_dict:
         if tid == "method":
             continue
-        print("Reconstructing contexts from TID " + tid)
-        xml_root = xml_root_dict[tid]
-        print("Dumping contexts from TID "+tid)
-        output_to_file(method_manager, load_context(xml_root), dump_data, dump_data2)
-        break
+        output_to_file(manager_dict["method"], manager_dict[tid], dump_data, dump_data2)
 
     file = open("agent-data", "w")
 
