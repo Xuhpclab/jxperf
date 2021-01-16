@@ -1,7 +1,8 @@
 #!/bin/bash
-
+export LD_PRELOAD=/home/bli11/jxperf/build/preload/libpreload.so
 ATTACH=$JXPerf_HOME/bin/jattach/attach
-MODE=DataCentric::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@1000000
+# MODE=DataCentric::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@1000000
+MODE=Generic::PERF_COUNT_HW_CPU_CYCLES:precise=2@1000000
 PID="$1"
 DURATION="$2"
 LOAD=load
