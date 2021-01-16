@@ -790,30 +790,32 @@ void Profiler::threadEnd() {
     OUTPUT *output_stream = reinterpret_cast<OUTPUT *>(TD_GET(output_state));
     std::unordered_set<Context *> dump_ctxt = {};
     
-    for (auto elem : (*ctxt_tree)) {
-        Context *ctxt_ptr = elem;
+    if (ctxt_tree != nullptr) {
+        for (auto elem : (*ctxt_tree)) {
+            Context *ctxt_ptr = elem;
 
-	    jmethodID method_id = ctxt_ptr->getFrame().method_id;
-        _code_cache_manager.checkAndMoveMethodToUncompiledSet(method_id);
+	        jmethodID method_id = ctxt_ptr->getFrame().method_id;
+            _code_cache_manager.checkAndMoveMethodToUncompiledSet(method_id);
     
-        if (ctxt_ptr->getMetrics() != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) { // leaf node of the redundancy pair
-            dump_ctxt.insert(ctxt_ptr);
-            xml::XMLObj *obj;
-            obj = xml::createXMLObj(ctxt_ptr);
-            if (obj != nullptr) {
-                output_stream->writef("%s", obj->getXMLStr().c_str());
-                delete obj;
-            } else continue;
-        
-            ctxt_ptr = ctxt_ptr->getParent();
-            while (ctxt_ptr != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) {
+            if (ctxt_ptr->getMetrics() != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) { // leaf node of the redundancy pair
                 dump_ctxt.insert(ctxt_ptr);
+                xml::XMLObj *obj;
                 obj = xml::createXMLObj(ctxt_ptr);
                 if (obj != nullptr) {
                     output_stream->writef("%s", obj->getXMLStr().c_str());
                     delete obj;
-                }
+                } else continue;
+        
                 ctxt_ptr = ctxt_ptr->getParent();
+                while (ctxt_ptr != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) {
+                    dump_ctxt.insert(ctxt_ptr);
+                    obj = xml::createXMLObj(ctxt_ptr);
+                    if (obj != nullptr) {
+                        output_stream->writef("%s", obj->getXMLStr().c_str());
+                        delete obj;
+                    }
+                    ctxt_ptr = ctxt_ptr->getParent();
+                }
             }
         }
     }
