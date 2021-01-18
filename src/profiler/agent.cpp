@@ -32,6 +32,7 @@ Argument* JVM::_argument = nullptr;
 
 extern SpinLock tree_lock;
 extern interval_tree_node *splay_tree_root;
+bool jni_flag = false;
 
 namespace {
 	Context *heap_analysis_constructContext(ASGCT_FN asgct, void *context, std::string client_name, int64_t obj_size){
@@ -123,18 +124,18 @@ static void JNICALL callbackVMInit(jvmtiEnv *jvmti, JNIEnv* jni, jthread thread)
     createJMethodIDsForClass(jvmti, klass);
   }
 
+#if 0
+  //Call java agent register_callback
   std::string client_name = GetClientName();
   if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0) {
     jclass myClass = NULL;
     jmethodID main = NULL;
-    //jmethodID main_gc = NULL;
         
-    //Call java agent register_callback
     myClass = jni->FindClass("com/google/monitoring/runtime/instrumentation/AllocationInstrumenter");
-
     main = jni->GetStaticMethodID(myClass, "register_callback", "([Ljava/lang/String;)V");
     jni->CallStaticVoidMethod(myClass, main, " ");
   }
+#endif
   // UNBLOCK_SAMPLE;
 }
 
@@ -186,7 +187,6 @@ static void JNICALL callbackThreadEnd(jvmtiEnv *jvmti, JNIEnv* jni_env, jthread 
 
 void JNICALL callbackGCEnd(jvmtiEnv *jvmti) {
   BLOCK_SAMPLE;
-  // printf("test\n");
   INFO("callbackGCEnd %d\n", TD_GET(tid));
   Profiler::getProfiler().IncrementGCCouter();
   INFO("callbackGCEnd %d END\n", TD_GET(tid));
@@ -236,6 +236,22 @@ static void JNICALL callbackCompiledMethodLoad(jvmtiEnv *jvmti_env, jmethodID me
     }
   }
 #endif
+
+  // Call java agent register_callback
+  std::string client_name = GetClientName();
+  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0) {
+    if (jni_flag) {
+      JNIEnv* _jni = JVM::jni();
+      jclass myClass = NULL;
+      jmethodID main = NULL;
+      jmethodID main_gc = NULL;
+
+      myClass = _jni->FindClass("com/google/monitoring/runtime/instrumentation/AllocationInstrumenter");
+      main = _jni->GetStaticMethodID(myClass, "register_callback", "([Ljava/lang/String;)V");
+      _jni->CallStaticVoidMethod(myClass, main, " ");
+      jni_flag = false;
+    }
+  }
 
   CompiledMethod *m = Profiler::getProfiler().getCodeCacheManager().addMethodAndRemoveFromUncompiledSet(method, code_size, code_addr, map_length, map);
   // CompiledMethod *m = Profiler::getProfiler().getCodeCacheManager().addMethod(method, code_size, code_addr, map_length, map);
@@ -368,7 +384,7 @@ bool JVM::init(JavaVM *jvm, const char *arg, bool attach) {
   /////////////////////
   // Init capabilities:
   jvmtiCapabilities capa;
-  memset(&capa, '\0', sizeof(jvmtiCapabilities));
+  memset(&capa, '\0', sizeof(jvmtiCapabilities)); 
   capa.can_generate_all_class_hook_events = 1;
 
   capa.can_generate_garbage_collection_events = 1;
@@ -450,7 +466,6 @@ bool JVM::shutdown() {
   return true; 
 }
 
-
 /**
 * Agent entry point
 */
@@ -464,17 +479,18 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) 
     UNBLOCK_SAMPLE;
     return JNI_ERR;
   }
+
   INFO("Agent_onLoad\n");
   UNBLOCK_SAMPLE;
   return JNI_OK;
 }
-
 
 /**
 * Agent entry point
 */
 JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options, void *reserved) {
   BLOCK_SAMPLE;
+  jni_flag = true;
   if(options[strlen(options)-1] == 's') {   
     printf("profiler start\n");
     options[strlen(options)-1] = '\0';
