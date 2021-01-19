@@ -91,8 +91,8 @@ class MethodManager:
 		assert(isinstance(method, Method))
 		key = method.method_id + "#"+ method.version
 		if key in self._method_dict:
-			print key, "already shown before"
-#			assert(key not in self._method_dict)
+			#print key, "already shown before"
+			#assert(key not in self._method_dict)
 			return
 		self._method_dict[key] = method
 		#print("method_count = "+str(len(self._method_dict)))
