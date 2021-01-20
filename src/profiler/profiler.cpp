@@ -32,6 +32,7 @@ static SpinLock lock_map;
 SpinLock tree_lock;
 interval_tree_node *splay_tree_root = NULL;
 static std::unordered_map<Context*, Context*> map = {};
+extern bool jni_flag;
 
 uint64_t GCCounter = 0;
 thread_local uint64_t localGCCounter = 0;
@@ -781,7 +782,7 @@ void Profiler::threadStart() {
 void Profiler::threadEnd() {
     if (clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0)
         PerfManager::closeEvents();
-    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0) {
+    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && jni_flag == false) {
         WP_ThreadTerminate();
     }
     ContextTree *ctxt_tree = reinterpret_cast<ContextTree *>(TD_GET(context_state));
