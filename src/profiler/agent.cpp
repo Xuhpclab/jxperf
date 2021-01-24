@@ -33,6 +33,7 @@ Argument* JVM::_argument = nullptr;
 extern SpinLock tree_lock;
 extern interval_tree_node *splay_tree_root;
 bool jni_flag = false;
+bool onload_flag = false;
 
 namespace {
 	Context *heap_analysis_constructContext(ASGCT_FN asgct, void *context, std::string client_name, int64_t obj_size){
@@ -472,6 +473,8 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) 
   // bool pause = true; while(pause);
 
   BLOCK_SAMPLE;
+  onload_flag = true;
+  jni_flag = false;
   INFO("Agent argument = %s\n", options);
   if (!JVM::init(jvm, options, false)) {
     UNBLOCK_SAMPLE;
@@ -488,8 +491,9 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) 
 */
 JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options, void *reserved) {
   BLOCK_SAMPLE;
+  onload_flag = false;
   jni_flag = true;
-  if(options[strlen(options)-1] == 's') {   
+  if(options[strlen(options)-1] == 's') {
     printf("profiler start\n");
     options[strlen(options)-1] = '\0';
     JVM::init(jvm, options, true);
@@ -507,7 +511,9 @@ JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options, void *reserved
 */
 JNIEXPORT void JNICALL Agent_OnUnload(JavaVM *vm) {
   BLOCK_SAMPLE;
-  JVM::shutdown();
-  INFO("Agent_OnUnload\n");
+  if (onload_flag) {
+    JVM::shutdown();
+    INFO("Agent_OnUnload\n");
+  }
   UNBLOCK_SAMPLE;
 }

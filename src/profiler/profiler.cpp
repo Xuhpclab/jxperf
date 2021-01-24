@@ -33,6 +33,8 @@ SpinLock tree_lock;
 interval_tree_node *splay_tree_root = NULL;
 static std::unordered_map<Context*, Context*> map = {};
 extern bool jni_flag;
+extern bool onload_flag;
+static SpinLock sk;
 
 uint64_t GCCounter = 0;
 thread_local uint64_t localGCCounter = 0;
@@ -716,13 +718,12 @@ void Profiler::init() {
 void Profiler::shutdown() {
     WP_Shutdown();
     PerfManager::processShutdown();
-    ThreadData::thread_data_shutdown();
-    output_statistics(); 
-    _statistics_file.close();
-
-#ifndef COUNT_OVERHEAD
-    _method_file.close();
-#endif
+    if(onload_flag) {
+        ThreadData::thread_data_shutdown();
+        output_statistics(); 
+        _statistics_file.close();
+        _method_file.close();
+    }
 }
 
 void Profiler::IncrementGCCouter() {
@@ -859,6 +860,13 @@ void Profiler::threadEnd() {
     __sync_fetch_and_add(&grandTotSameNUMA, totalSameNUMA);
     __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
     __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
+
+    if(!onload_flag) {
+        sk.lock();
+        _statistics_file.seekp(0,std::ios::beg);
+        output_statistics();
+        sk.unlock();
+    } 
 }
 
 
