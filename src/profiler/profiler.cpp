@@ -50,7 +50,7 @@ uint64_t grandTotAllocTimes = 0;
 uint64_t grandTotSameNUMA = 0;
 uint64_t grandTotDiffNUMA = 0;
 uint64_t grandTotL1Cachemiss = 0;
-
+uint64_t grandTotGenericCounter = 0;
 
 thread_local uint64_t totalWrittenBytes = 0;
 thread_local uint64_t totalLoadedBytes = 0;
