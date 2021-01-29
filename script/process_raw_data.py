@@ -128,11 +128,11 @@ def load_context(context_root):
 							ctxt.metrics_type = "ALWAYS_INEQUAL"
 				else:
 					if attr_dict.has_key("value1"):
-				    		assert(not(attr_dict.has_key("value2")))
+				    		# assert(not(attr_dict.has_key("value2")))
 				    		ctxt.metrics_dict["value"] = attr_dict["value1"]
 				    		ctxt.metrics_type = "INT"
 					if attr_dict.has_key("value2"):
-				    		assert(not(attr_dict.has_key("value1")))
+				    		# assert(not(attr_dict.has_key("value1")))
 				    		ctxt.metrics_dict["value"] = attr_dict["value2"]
 				    		ctxt.metrics_type = "FP"
 
@@ -332,6 +332,7 @@ def main():
 		for row in rows:
 			if row[0] != "":
 				file.write(row[0] + "\n\nGeneric Counter: " + str(float(row[-1])) +"\n")
+		file.write("\nTotal Generic Counter: " + result[0])
 	elif isHeap == True:
 		file.write("-----------------------Heap Analysis------------------------------\n")
 

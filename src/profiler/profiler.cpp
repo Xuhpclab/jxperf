@@ -109,7 +109,7 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
 
 
 void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt, int metric_id1, int metric_id2, int metric_id3) {
-    if (!sampleData->isPrecise || !sampleData->addr) return;
+    if (clientName.compare(GENERIC) != 0 && (!sampleData->isPrecise || !sampleData->addr)) return;
 
     void *sampleIP = (void *)(sampleData->ip);
     void *sampleAddr = (void *)(sampleData->addr); 
@@ -123,7 +123,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     CodeCacheManager &code_cache_manager = Profiler::getProfiler().getCodeCacheManager();
     
     CompiledMethod *method = code_cache_manager.getMethod(sampleData->ip, method_id, method_version);
-    if (method == nullptr) return;
+    // if (method == nullptr) return;
     
     uint32_t threshold = (metrics::MetricInfoManager::getMetricInfo(metric_id1))->threshold;
 
@@ -213,7 +213,7 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
 		metric_val.i = 1;
 		assert(metrics->increment(metric_id2, metric_val));
         totalGenericCounter += 1;
-	}
+    }
 }
 
 void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
@@ -860,6 +860,7 @@ void Profiler::threadEnd() {
     __sync_fetch_and_add(&grandTotSameNUMA, totalSameNUMA);
     __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
     __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
+    __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter);
 
     if(!onload_flag) {
         sk.lock();
@@ -902,6 +903,7 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotDiffNUMA << std::endl;
     } else if (clientName.compare(GENERIC) == 0) {
         _statistics_file << clientName << std::endl;
+        _statistics_file << grandTotGenericCounter << std::endl;
     } else if (clientName.compare(HEAP) == 0) {
         _statistics_file << clientName << std::endl;
     }

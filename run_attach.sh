@@ -3,7 +3,7 @@ export LD_PRELOAD=/home/bli11/jxperf/build/preload/libpreload.so
 ATTACH=$JXPerf_HOME/bin/jattach/attach
 
 # Pick one of following modes
-MODE=Generic::PERF_COUNT_HW_CPU_CYCLES:precise=2@100000
+MODE=Generic::CYCLES:precise=0@1000000
 # MODE=DeadStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@10000
 # MODE=SilentStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@10000
 # MODE=SilentLoad::MEM_UOPS_RETIRED:ALL_LOADS:precise=2@10000
