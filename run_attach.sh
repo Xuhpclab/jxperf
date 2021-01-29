@@ -1,7 +1,6 @@
 #!/bin/bash
 export LD_PRELOAD=/home/bli11/jxperf/build/preload/libpreload.so
 ATTACH=$JXPerf_HOME/bin/jattach/attach
-
 # Pick one of following modes
 MODE=Generic::CYCLES:precise=0@1000000
 # MODE=DeadStore::MEM_UOPS_RETIRED:ALL_STORES:precise=2@10000
