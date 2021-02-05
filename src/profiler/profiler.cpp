@@ -123,7 +123,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     CodeCacheManager &code_cache_manager = Profiler::getProfiler().getCodeCacheManager();
     
     CompiledMethod *method = code_cache_manager.getMethod(sampleData->ip, method_id, method_version);
-    // if (method == nullptr) return;
+    if (method == nullptr) return;
     
     uint32_t threshold = (metrics::MetricInfoManager::getMetricInfo(metric_id1))->threshold;
 
