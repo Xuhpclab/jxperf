@@ -34,7 +34,7 @@ interval_tree_node *splay_tree_root = NULL;
 static std::unordered_map<Context*, Context*> map = {};
 extern bool jni_flag;
 extern bool onload_flag;
-static SpinLock sk;
+static SpinLock output_lock;
 
 uint64_t GCCounter = 0;
 thread_local uint64_t localGCCounter = 0;
@@ -210,9 +210,9 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
 			ctxt_access->setMetrics(metrics);
 		}
 		metrics::metric_val_t metric_val;
-		metric_val.i = 1;
+		metric_val.i = threshold;
 		assert(metrics->increment(metric_id2, metric_val));
-        totalGenericCounter += 1;
+        totalGenericCounter += threshold;
     }
 }
 
@@ -849,25 +849,38 @@ void Profiler::threadEnd() {
 
     ThreadData::thread_data_dealloc(clientName);
 
-    __sync_fetch_and_add(&grandTotWrittenBytes, totalWrittenBytes);
-    __sync_fetch_and_add(&grandTotLoadedBytes, totalLoadedBytes);
-    __sync_fetch_and_add(&grandTotUsedBytes, totalUsedBytes);
-    __sync_fetch_and_add(&grandTotDeadBytes, totalDeadBytes);
-    __sync_fetch_and_add(&grandTotNewBytes, totalNewBytes);
-    __sync_fetch_and_add(&grandTotOldBytes, totalOldBytes);
-    __sync_fetch_and_add(&grandTotOldAppxBytes, totalOldAppxBytes);
-    __sync_fetch_and_add(&grandTotAllocTimes, totalAllocTimes);
-    __sync_fetch_and_add(&grandTotSameNUMA, totalSameNUMA);
-    __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
-    __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
-    __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter);
-
-    if(!onload_flag) {
-        sk.lock();
+    if (onload_flag) {  //onload mode
+        __sync_fetch_and_add(&grandTotWrittenBytes, totalWrittenBytes);
+        __sync_fetch_and_add(&grandTotLoadedBytes, totalLoadedBytes);
+        __sync_fetch_and_add(&grandTotUsedBytes, totalUsedBytes);
+        __sync_fetch_and_add(&grandTotDeadBytes, totalDeadBytes);
+        __sync_fetch_and_add(&grandTotNewBytes, totalNewBytes);
+        __sync_fetch_and_add(&grandTotOldBytes, totalOldBytes);
+        __sync_fetch_and_add(&grandTotOldAppxBytes, totalOldAppxBytes);
+        __sync_fetch_and_add(&grandTotAllocTimes, totalAllocTimes);
+        __sync_fetch_and_add(&grandTotSameNUMA, totalSameNUMA);
+        __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
+        __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
+        __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter);
+    } else {    //attach mode
+        output_lock.lock();
+        grandTotWrittenBytes += totalWrittenBytes;
+        grandTotLoadedBytes += totalLoadedBytes;
+        grandTotUsedBytes += totalUsedBytes;
+        grandTotDeadBytes += totalDeadBytes;
+        grandTotNewBytes += totalNewBytes;
+        grandTotOldBytes += totalOldBytes;
+        grandTotOldAppxBytes += totalOldAppxBytes;
+        grandTotAllocTimes += totalAllocTimes;
+        grandTotSameNUMA += totalSameNUMA;
+        grandTotDiffNUMA += totalDiffNUMA;
+        grandTotL1Cachemiss += totalL1Cachemiss;
+        grandTotGenericCounter += totalGenericCounter;
         _statistics_file.seekp(0,std::ios::beg);
         output_statistics();
-        sk.unlock();
-    } 
+        output_lock.unlock();
+    }
+
 }
 
 
