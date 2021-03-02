@@ -260,9 +260,16 @@ def output_to_buff(method_manager, context_manager):
 
         sample_type = profile.sample_type.add()
         profile.string_table.append("")
-        profile.string_table.append("type")
+        profile.string_table.append("type1")
         sample_type.type = len(profile.string_table) - 1
-        profile.string_table.append("unit")
+        profile.string_table.append("unit1")
+        sample_type.unit = len(profile.string_table) - 1
+
+        sample_type = profile.sample_type.add()
+        profile.string_table.append("")
+        profile.string_table.append("type2")
+        sample_type.type = len(profile.string_table) - 1
+        profile.string_table.append("unit2")
         sample_type.unit = len(profile.string_table) - 1
 
         location_id = 1
@@ -273,6 +280,7 @@ def output_to_buff(method_manager, context_manager):
 
             sample = profile.sample.add()
             sample.location_id.append(location_id)
+            sample.value.append(1)
             sample.value.append(1)
             location_id += 1
             
@@ -290,10 +298,14 @@ def output_to_buff(method_manager, context_manager):
                             key.method_start_line = -1
                         function = profile.function.add()
                         function.id = function_id
-                        profile.string_table.append(key.method_name)
+                        # profile.string_table.append(key.method_name)
+                        profile.string_table.append(key.class_name + "." + key.method_name + ":" + str(key.source_lineno))
                         function.name = len(profile.string_table) - 1
+                        sample.value[0] = 10
+                        sample.value[1] = 1000
 
-                        profile.string_table.append("/Users/dolan/Desktop/test/gui/ObjectLayout/ObjectLayout/src/main/java/"+ key.source_file)
+                        # profile.string_table.append("/Users/dolan/Desktop/test/gui/ObjectLayout/ObjectLayout/src/main/java/"+ key.source_file)
+                        profile.string_table.append(key.class_name)
                         function.filename = len(profile.string_table) - 1
                         function.start_line = int(key.method_start_line)
 
