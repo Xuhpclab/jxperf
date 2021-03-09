@@ -49,9 +49,10 @@ def thread_parse_input_file(input_data):
     print("parsing ", file_name)
     with open(file_name) as f:
         xml = f.read()
-    tree = ET.fromstring(re.sub(r"(<\?xml[^>]+\?>)", r"<root>", xml) + "</root>")
-    if len(tree) != 0:
-        xml_root_dict[tid] = tree;
+    if xml != "":
+        tree = ET.fromstring(re.sub(r"(<\?xml[^>]+\?>)", r"<root>", xml) + "</root>")
+        if len(tree) != 0:
+            xml_root_dict[tid] = tree
     # print(tree.getchildren().tag)
 
 def parse_input_files(directory):
