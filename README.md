@@ -131,7 +131,7 @@ $ python $JXPerf_HOME/script/process_raw_data.py
     -   SilentLoad::MEM_UOPS_RETIRED:ALL_LOADS:precise=2@sampling_rate
 -   **Start Profiler**
 ```console
-$ ./run_attach.sh <pid> <running time in seconds>
+$ ./run_attach.sh <running time in seconds> <pid>
 ```
 
 ## Support Platforms
@@ -152,8 +152,8 @@ We tested our tool on following platforms.
 
 | JDK Versions          |
 |-----------------------|
-| JDK 8 & later         |
-| OpenJDK 8 & later     |
+| JDK 11 & later         |
+| OpenJDK 11 & later     |
 
 ## License
 

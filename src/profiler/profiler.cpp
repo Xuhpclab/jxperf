@@ -32,6 +32,9 @@ static SpinLock lock_map;
 SpinLock tree_lock;
 interval_tree_node *splay_tree_root = NULL;
 static std::unordered_map<Context*, Context*> map = {};
+extern bool jni_flag;
+extern bool onload_flag;
+static SpinLock output_lock;
 
 uint64_t GCCounter = 0;
 thread_local uint64_t localGCCounter = 0;
@@ -47,7 +50,7 @@ uint64_t grandTotAllocTimes = 0;
 uint64_t grandTotSameNUMA = 0;
 uint64_t grandTotDiffNUMA = 0;
 uint64_t grandTotL1Cachemiss = 0;
-
+uint64_t grandTotGenericCounter = 0;
 
 thread_local uint64_t totalWrittenBytes = 0;
 thread_local uint64_t totalLoadedBytes = 0;
@@ -106,7 +109,7 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
 
 
 void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt, int metric_id1, int metric_id2, int metric_id3) {
-    if (!sampleData->isPrecise || !sampleData->addr) return;
+    if (clientName.compare(GENERIC) != 0 && (!sampleData->isPrecise || !sampleData->addr)) return;
 
     void *sampleIP = (void *)(sampleData->ip);
     void *sampleAddr = (void *)(sampleData->addr); 
@@ -207,10 +210,10 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
 			ctxt_access->setMetrics(metrics);
 		}
 		metrics::metric_val_t metric_val;
-		metric_val.i = 1;
+		metric_val.i = threshold;
 		assert(metrics->increment(metric_id2, metric_val));
-        totalGenericCounter += 1;
-	}
+        totalGenericCounter += threshold;
+    }
 }
 
 void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
@@ -715,13 +718,12 @@ void Profiler::init() {
 void Profiler::shutdown() {
     WP_Shutdown();
     PerfManager::processShutdown();
-    ThreadData::thread_data_shutdown();
-    output_statistics(); 
-    _statistics_file.close();
-
-#ifndef COUNT_OVERHEAD
-    _method_file.close();
-#endif
+    if(onload_flag) {
+        ThreadData::thread_data_shutdown();
+        output_statistics(); 
+        _statistics_file.close();
+        _method_file.close();
+    }
 }
 
 void Profiler::IncrementGCCouter() {
@@ -781,7 +783,7 @@ void Profiler::threadStart() {
 void Profiler::threadEnd() {
     if (clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0)
         PerfManager::closeEvents();
-    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0) {
+    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && jni_flag == false) {
         WP_ThreadTerminate();
     }
     ContextTree *ctxt_tree = reinterpret_cast<ContextTree *>(TD_GET(context_state));
@@ -790,30 +792,32 @@ void Profiler::threadEnd() {
     OUTPUT *output_stream = reinterpret_cast<OUTPUT *>(TD_GET(output_state));
     std::unordered_set<Context *> dump_ctxt = {};
     
-    for (auto elem : (*ctxt_tree)) {
-        Context *ctxt_ptr = elem;
+    if (ctxt_tree != nullptr) {
+        for (auto elem : (*ctxt_tree)) {
+            Context *ctxt_ptr = elem;
 
-	    jmethodID method_id = ctxt_ptr->getFrame().method_id;
-        _code_cache_manager.checkAndMoveMethodToUncompiledSet(method_id);
+	        jmethodID method_id = ctxt_ptr->getFrame().method_id;
+            _code_cache_manager.checkAndMoveMethodToUncompiledSet(method_id);
     
-        if (ctxt_ptr->getMetrics() != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) { // leaf node of the redundancy pair
-            dump_ctxt.insert(ctxt_ptr);
-            xml::XMLObj *obj;
-            obj = xml::createXMLObj(ctxt_ptr);
-            if (obj != nullptr) {
-                output_stream->writef("%s", obj->getXMLStr().c_str());
-                delete obj;
-            } else continue;
-        
-            ctxt_ptr = ctxt_ptr->getParent();
-            while (ctxt_ptr != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) {
+            if (ctxt_ptr->getMetrics() != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) { // leaf node of the redundancy pair
                 dump_ctxt.insert(ctxt_ptr);
+                xml::XMLObj *obj;
                 obj = xml::createXMLObj(ctxt_ptr);
                 if (obj != nullptr) {
                     output_stream->writef("%s", obj->getXMLStr().c_str());
                     delete obj;
-                }
+                } else continue;
+        
                 ctxt_ptr = ctxt_ptr->getParent();
+                while (ctxt_ptr != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) {
+                    dump_ctxt.insert(ctxt_ptr);
+                    obj = xml::createXMLObj(ctxt_ptr);
+                    if (obj != nullptr) {
+                        output_stream->writef("%s", obj->getXMLStr().c_str());
+                        delete obj;
+                    }
+                    ctxt_ptr = ctxt_ptr->getParent();
+                }
             }
         }
     }
@@ -845,17 +849,38 @@ void Profiler::threadEnd() {
 
     ThreadData::thread_data_dealloc(clientName);
 
-    __sync_fetch_and_add(&grandTotWrittenBytes, totalWrittenBytes);
-    __sync_fetch_and_add(&grandTotLoadedBytes, totalLoadedBytes);
-    __sync_fetch_and_add(&grandTotUsedBytes, totalUsedBytes);
-    __sync_fetch_and_add(&grandTotDeadBytes, totalDeadBytes);
-    __sync_fetch_and_add(&grandTotNewBytes, totalNewBytes);
-    __sync_fetch_and_add(&grandTotOldBytes, totalOldBytes);
-    __sync_fetch_and_add(&grandTotOldAppxBytes, totalOldAppxBytes);
-    __sync_fetch_and_add(&grandTotAllocTimes, totalAllocTimes);
-    __sync_fetch_and_add(&grandTotSameNUMA, totalSameNUMA);
-    __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
-    __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
+    if (onload_flag) {  //onload mode
+        __sync_fetch_and_add(&grandTotWrittenBytes, totalWrittenBytes);
+        __sync_fetch_and_add(&grandTotLoadedBytes, totalLoadedBytes);
+        __sync_fetch_and_add(&grandTotUsedBytes, totalUsedBytes);
+        __sync_fetch_and_add(&grandTotDeadBytes, totalDeadBytes);
+        __sync_fetch_and_add(&grandTotNewBytes, totalNewBytes);
+        __sync_fetch_and_add(&grandTotOldBytes, totalOldBytes);
+        __sync_fetch_and_add(&grandTotOldAppxBytes, totalOldAppxBytes);
+        __sync_fetch_and_add(&grandTotAllocTimes, totalAllocTimes);
+        __sync_fetch_and_add(&grandTotSameNUMA, totalSameNUMA);
+        __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
+        __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
+        __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter);
+    } else {    //attach mode
+        output_lock.lock();
+        grandTotWrittenBytes += totalWrittenBytes;
+        grandTotLoadedBytes += totalLoadedBytes;
+        grandTotUsedBytes += totalUsedBytes;
+        grandTotDeadBytes += totalDeadBytes;
+        grandTotNewBytes += totalNewBytes;
+        grandTotOldBytes += totalOldBytes;
+        grandTotOldAppxBytes += totalOldAppxBytes;
+        grandTotAllocTimes += totalAllocTimes;
+        grandTotSameNUMA += totalSameNUMA;
+        grandTotDiffNUMA += totalDiffNUMA;
+        grandTotL1Cachemiss += totalL1Cachemiss;
+        grandTotGenericCounter += totalGenericCounter;
+        _statistics_file.seekp(0,std::ios::beg);
+        output_statistics();
+        output_lock.unlock();
+    }
+
 }
 
 
@@ -891,6 +916,7 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotDiffNUMA << std::endl;
     } else if (clientName.compare(GENERIC) == 0) {
         _statistics_file << clientName << std::endl;
+        _statistics_file << grandTotGenericCounter << std::endl;
     } else if (clientName.compare(HEAP) == 0) {
         _statistics_file << clientName << std::endl;
     }

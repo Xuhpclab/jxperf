@@ -282,7 +282,7 @@ CompiledMethod *CompiledMethodGroup::addMethod(jint code_size, const void *code_
   
   uint32_t version = ++_recent_version;
   uint64_t start_addr = (uint64_t) code_addr;
-  assert(_address_method_map.find(start_addr) == _address_method_map.end()); // check whether it has been added
+  // assert(_address_method_map.find(start_addr) == _address_method_map.end()); // check whether it has been added
   
   lock_scope.unsetLock();
   CompiledMethod * new_method = new(std::nothrow) CompiledMethod(_method_id, version, code_size, code_addr);
