@@ -350,6 +350,7 @@ def main():
         for row in rows:
             if row[0] != "":
                 file.write(row[0] + "\n\nGeneric Counter: " + str(float(row[-1])) +"\n")
+        file.write("\nTotal Generic Counter: " + result[0])
     elif isHeap == True:
         file.write("-----------------------Heap Analysis------------------------------\n")
 

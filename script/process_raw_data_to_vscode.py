@@ -9,6 +9,11 @@ from functools import partial
 import re
 import xml.etree.ElementTree as ET
 
+import json
+
+output_root = sys.argv[1]
+
+
 ##global variables
 isDataCentric = False
 isNuma = False
@@ -17,6 +22,7 @@ isHeap = False
 
 g_thread_context_dict = dict()
 g_method_dict = dict()
+g_file_map = dict()
 
 
 def get_all_files(directory):
@@ -294,9 +300,9 @@ def output_to_buff(method_manager, context_manager):
                         print("root")
                     elif key.ctype == 1:
                         if key.source_lineno == "??":
-                            key.source_lineno = "-1"
+                            key.source_lineno = -1
                         if key.method_start_line == "??":
-                            key.method_start_line = "-1"
+                            key.method_start_line = -1
                         function = profile.function.add()
                         function.id = function_id
                         # profile.string_table.append(key.method_name)
@@ -342,7 +348,149 @@ def output_to_buff(method_manager, context_manager):
                 #     else:
                 #         dump_data2[key] = (ctxt_list[-1].metrics_dict["value"])
 
+def get_file_path(file_name, class_name):
+    package_name = class_name.rsplit(".", 1)[0]
+    if package_name + ":" + file_name in g_file_map:
+        return g_file_map[package_name + ":" + file_name]
+    else:
+        return file_name
+
+def get_simple_tree(root, filter_value):
+    new_children = []
+    for child in root['c']:
+        if child['v'] > filter_value:
+            new_children.append(child)
+    root['c'] = new_children
+    for child in root['c']:
+        get_simple_tree(child, filter_value)
+
+def output_to_vscode(tid, method_manager, context_manager, ctxt_map, tree_node_map):
+    thread_tree_root = None
+    intpr = interpreter.Interpreter(method_manager, context_manager)
+    rtraces = context_manager.getAllRtrace("0")
+    for rtrace in rtraces:
+        # print(len(rtrace))
+        metrics_value = 0
+        if len(rtrace) > 0:
+            metrics_value = rtrace[0].metrics_dict["value"]
+        else:
+            continue
+        last_tree_item_id = "-1"
+        for trace_node in rtrace:
+            if trace_node.id != 0:
+                key = intpr.getInterpreter_Context(trace_node)
+                if key.ctype < 0:
+                    continue
+                ctxt_hndl_str = tid + "-" + str(trace_node.id)
+                if ctxt_hndl_str in ctxt_map:
+                    ctxt_map[ctxt_hndl_str]["value"] += metrics_value
+                    tree_node_map[ctxt_hndl_str]["v"] += metrics_value
+                    if last_tree_item_id !=  "-1":
+                        if tree_node_map[last_tree_item_id] not in tree_node_map[ctxt_hndl_str]["c"]:
+                            # print(ctxt_hndl_str + " append "+ last_tree_item_id)
+                            tree_node_map[ctxt_hndl_str]["c"].append(tree_node_map[last_tree_item_id])
+                else:
+                    if key.ctype == 0:
+                        ctxt_map[ctxt_hndl_str] = {
+                            "pc": " ",
+                            "name": "Thread["+ tid + "]ROOT",
+                            "file_path": " ",
+                            "asm": " ",
+                            "line_no": 0,
+                            "value": metrics_value
+                        }
+                        tree_node_map[ctxt_hndl_str] = {
+                            "ctxt_hndl": ctxt_hndl_str,
+                            "n": "Thread["+ tid + "]ROOT",
+                            "v": metrics_value,
+                            "c": []
+                        }
+                        thread_tree_root = tree_node_map[ctxt_hndl_str]
+                    elif key.ctype == 1:
+                        if key.source_lineno == "??":
+                            key.source_lineno = "0"
+                        line_no = int(key.source_lineno)
+                        file_path = get_file_path(key.source_file, key.class_name)
+                        ctxt_map[ctxt_hndl_str] = {
+                            "pc": " ",
+                            "name": key.class_name + "." + key.method_name + ":" + str(key.source_lineno),
+                            "file_path": file_path,
+                            "asm": " ",
+                            "line_no": line_no,
+                            "value": metrics_value
+                        }
+                        tree_node_map[ctxt_hndl_str] = {
+                            "ctxt_hndl": ctxt_hndl_str,
+                            "n": key.class_name + "." + key.method_name + ":" + str(key.source_lineno),
+                            "v": metrics_value,
+                            "c": []
+                        }
+                    if last_tree_item_id !=  "-1":
+                        # print(ctxt_hndl_str + " append "+ last_tree_item_id)
+                        tree_node_map[ctxt_hndl_str]["c"].append(tree_node_map[last_tree_item_id])
+                last_tree_item_id = ctxt_hndl_str
+    return thread_tree_root
+
+def merge_tree_node(node1, node2, ctxt_map, tree_node_map):
+    ctxt_map[node1["ctxt_hndl"]]["value"] += node2["v"]
+    node1["v"] += node2["v"]
+    for child_node2 in node2["c"]:
+        same_node = None
+        for child_node1 in node1["c"]:
+            if child_node2["n"] == child_node1["n"]:
+                same_node = child_node1
+                break
+        if same_node == None:
+            node1["c"].append(child_node2)
+        else:
+            merge_tree_node(same_node, child_node2, ctxt_map, tree_node_map)
+
+    ctxt_map.pop(node2["ctxt_hndl"])
+    tree_node_map.pop(node2["ctxt_hndl"])
+
+def merge_tree_data(tree_root, ctxt_map, tree_node_map):
+    first_child = tree_root["c"][0]
+    for child in tree_root["c"]:
+        if first_child != child:
+            merge_tree_node(first_child, child, ctxt_map, tree_node_map)
+    
+
+def cout_tree_node(root):
+    if root == None:
+        return 0
+    num = 1
+    for child in root["c"]:  
+        num += cout_tree_node(child)
+    return num
+
+def update_sourcefile_map(file_name, filepath, type):
+    with open(filepath,'r') as file:
+        content = file.readlines()
+        for line in content:
+            if line.startswith('package '):
+                package_name = ""
+                if type == "java":
+                    package_name = line[8:-2]
+                else :
+                    package_name = line[8:-1]
+                # print(package_name + ":" + file_name + " " + filepath)
+                g_file_map[package_name + ":" + file_name] = filepath.replace(output_root+"/", "")
+                break
+
+def init_sourcefile_map(path):
+    filelist = os.listdir(path)
+    for filename in filelist:
+        filepath = os.path.join(path, filename)
+        if os.path.isdir(filepath):
+            init_sourcefile_map(filepath)
+        else:
+            if os.path.splitext(filename)[-1][1:] == "java" or os.path.splitext(filename)[-1][1:] == "scala" :
+                update_sourcefile_map(filename, filepath, os.path.splitext(filename)[-1][1:])
+
+
+
 def main():
+    init_sourcefile_map(output_root)
     file = open("agent-statistics.run", "r")
     result = file.read().splitlines()
     file.close()
@@ -366,11 +514,59 @@ def main():
     ### read all agent trace files
     manager_dict = init_manager_dict(parse_input_files("."))
 
+    ctxt_map = {
+        "process-root": {
+            "pc": " ",
+            "name": "ROOT",
+            "file_path": " ",
+            "asm": " ",
+            "line_no": 0,
+            "value": 0
+        }
+    }
+    tree_node_map = {
+        "process-root": {
+            "ctxt_hndl": "process-root",
+            "n": "ROOT",
+            "v": 0,
+            "c": []
+        }
+    }
+    tree_root = tree_node_map["process-root"]
     for tid in manager_dict:
         if tid == "method":
             continue
-        output_to_buff(manager_dict["method"], manager_dict[tid])
+        # print(tid)
+        # output_to_buff(manager_dict["method"], manager_dict[tid])
+        thread_tree_root = output_to_vscode(tid, manager_dict["method"], manager_dict[tid], ctxt_map, tree_node_map)
+        
+        if thread_tree_root:
+            merge_tree_node(tree_root, thread_tree_root, ctxt_map, tree_node_map)
 
+    print(cout_tree_node(tree_root))
+    get_simple_tree(tree_root, tree_root['v']/1000)
+    print(cout_tree_node(tree_root))
+
+    drdata_folder = output_root + "/.drcctprof";
+    print(drdata_folder)
+
+    if not os.path.exists(drdata_folder):
+        os.makedirs(drdata_folder)
+    with open(drdata_folder + '/ctxt-map.json', 'w') as fp:
+        json.dump(ctxt_map, fp)
+    
+    with open(drdata_folder + '/flame-graph.json', 'w') as fp:
+        json.dump(tree_root, fp)
+    
+    metrics = [
+        {
+            "Des": "Global CPU Cycles",
+            "Type": 1
+        }
+    ]
+    
+    with open(drdata_folder + '/metrics.json', 'w') as fp:
+        json.dump(metrics, fp)
     # remove_all_files(".")
 
 main()

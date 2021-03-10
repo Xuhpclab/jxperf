@@ -55,7 +55,9 @@ XMLObj *createXMLObj(ContextMetrics * instance) {
         
         /*int min_red_byte = MetricInfoManager::getMetricInfo(i)->threshold * 10;
         if (metric_val.i >= min_red_byte || metric_val.r >= min_red_byte)*/ isLargeRedundancy = true;
-        
+        if (!(metric_val.i || metric_val.r)) {
+            continue;
+        }
         XMLObj *child_obj = new(std::nothrow) XMLObj("metric");
         assert(child_obj);
         SET_ATTR(child_obj, "id", i);

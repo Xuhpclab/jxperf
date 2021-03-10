@@ -26,7 +26,7 @@ class Interpreter:
 			if method:
 				class_name = method.class_name
 				method_name = method.method_name				
-				source_file = class_name.replace(".","/") + "/" + method.file
+				source_file = method.file
 				source_lineno = method.addr2line(context.binary_addr)
 				method_start_line = method.start_line
 			else:
@@ -38,7 +38,7 @@ class Interpreter:
 			if method:
 				method_name = method.method_name
 				class_name = method.class_name
-				source_file = class_name.replace(".","/") + "/" + method.file
+				source_file = method.file
 				source_lineno = method.bci2line(context.bci)
 				method_start_line = method.start_line
 				ip = None
