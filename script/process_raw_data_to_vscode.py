@@ -431,28 +431,38 @@ def output_to_vscode(tid, method_manager, context_manager, ctxt_map, tree_node_m
                 last_tree_item_id = ctxt_hndl_str
     return thread_tree_root
 
+def recursion_merge_list(node_list, ctxt_map, tree_node_map):
+    new_list = []
+    for node1 in node_list:
+        same_node = None
+        for node2 in new_list:
+            if node2["n"] == node1["n"]:
+                same_node = node2
+                break
+        if same_node == None:
+            new_list.append(node1)
+        else:
+            ctxt_map[same_node["ctxt_hndl"]]["value"] += node1["v"]
+            same_node["v"] += node1["v"]
+            for child_node in node1["c"]:
+                same_node["c"].append(child_node)
+            ctxt_map.pop(node1["ctxt_hndl"])
+            tree_node_map.pop(node1["ctxt_hndl"])
+    node_list.clear()
+    for node in new_list:
+        recursion_merge_list(node["c"], ctxt_map, tree_node_map)
+        node_list.append(node)
+    
+
 def merge_tree_node(node1, node2, ctxt_map, tree_node_map):
     ctxt_map[node1["ctxt_hndl"]]["value"] += node2["v"]
     node1["v"] += node2["v"]
-    for child_node2 in node2["c"]:
-        same_node = None
-        for child_node1 in node1["c"]:
-            if child_node2["n"] == child_node1["n"]:
-                same_node = child_node1
-                break
-        if same_node == None:
-            node1["c"].append(child_node2)
-        else:
-            merge_tree_node(same_node, child_node2, ctxt_map, tree_node_map)
-
+    for child_node in node2["c"]:
+        node1["c"].append(child_node)
     ctxt_map.pop(node2["ctxt_hndl"])
     tree_node_map.pop(node2["ctxt_hndl"])
 
-def merge_tree_data(tree_root, ctxt_map, tree_node_map):
-    first_child = tree_root["c"][0]
-    for child in tree_root["c"]:
-        if first_child != child:
-            merge_tree_node(first_child, child, ctxt_map, tree_node_map)
+    recursion_merge_list(node1["c"], ctxt_map, tree_node_map)
     
 
 def cout_tree_node(root):
