@@ -114,7 +114,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     void *sampleIP = (void *)(sampleData->ip);
     void *sampleAddr = (void *)(sampleData->addr); 
 
-    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0) {
+    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0) {
         if (!IsValidAddress(sampleIP, sampleAddr)) return;
     }
 
@@ -771,7 +771,7 @@ void Profiler::threadStart() {
     if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
     else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
     else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
-    else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0) { 
+    else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0) { 
         ERROR("Can't decode client %s", clientName.c_str());
         assert(false);
     }
@@ -781,9 +781,10 @@ void Profiler::threadStart() {
 
 
 void Profiler::threadEnd() {
-    if (clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0)
+    if (clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0) {
         PerfManager::closeEvents();
-    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && jni_flag == false) {
+    }
+    if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0 && jni_flag == false) {
         WP_ThreadTerminate();
     }
     ContextTree *ctxt_tree = reinterpret_cast<ContextTree *>(TD_GET(context_state));
@@ -919,5 +920,8 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotGenericCounter << std::endl;
     } else if (clientName.compare(HEAP) == 0) {
         _statistics_file << clientName << std::endl;
+    } else if (clientName.compare(ALLOCATION_TIMES) == 0) {
+        _statistics_file << clientName << std::endl;
+        _statistics_file << grandTotAllocTimes << std::endl;
     }
 }

@@ -14,6 +14,7 @@ isDataCentric = False
 isNuma = False
 isGeneric = False
 isHeap = False
+isAllocTimes = False
 
 g_thread_context_dict = dict()
 g_method_dict = dict()
@@ -272,6 +273,9 @@ def main():
         result = result[1:]
     elif result[0] == 'HEAP':
         isHeap = True
+    elif result[0] == 'ALLOCTIMES':
+        isAllocTimes = True
+        result = result[1:]
 
     ### read all agent trace files
     manager_dict = init_manager_dict(parse_input_files("."))
@@ -285,7 +289,7 @@ def main():
 
     file = open("agent-data", "w")
 
-    if result and isDataCentric == False and isNuma == False and isGeneric == False and isHeap == False:
+    if result and isDataCentric == False and isNuma == False and isGeneric == False and isHeap == False and isAllocTimes == False:
         assert(len(result) == 3 or len(result) == 4)
         deadOrRedBytes = int(result[1])
 
@@ -359,6 +363,15 @@ def main():
         for row in rows:
             if row[0] != "":
                 file.write(row[0] + "\n\nObject allocation size: " + str(row[-1]) +"bytes\n")
+    elif isAllocTimes == True:
+        file.write("-----------------------Allocation Times Analysis------------------------------\n")
+
+        rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
+
+        for row in rows:
+            if row[0] != "":
+                file.write(row[0] + "\n\nAllocation Times: " + str(row[-1]) +"\n")
+        file.write("\nTotal Allocation Times: " + result[0])
 
     file.close()
 
