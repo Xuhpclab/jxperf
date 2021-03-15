@@ -44,7 +44,7 @@ namespace {
         last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame);       
     
 
-    if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0) {
+    if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0) {
         metrics::ContextMetrics *metrics = last_ctxt->getMetrics();
         if (metrics == nullptr) {
             metrics = new metrics::ContextMetrics();
@@ -52,9 +52,9 @@ namespace {
         }
         metrics::metric_val_t metric_val;
         uint32_t threshold = (metrics::MetricInfoManager::getMetricInfo(0))->threshold;
-        metric_val.i = threshold;
+        metric_val.i = 1;
         assert(metrics->increment(0, metric_val)); // id = 0: allocation times
-        totalAllocTimes += threshold;
+        totalAllocTimes += 1;
     }
 
     return last_ctxt;

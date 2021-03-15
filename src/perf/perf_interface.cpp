@@ -138,12 +138,12 @@ bool process_event_list(const std::vector<std::string> &event_list){
         // encode the event
         if (!perf_encode_event(current_event_info.name, &(current_event_info.attr))){
             ERROR("Can't encode %s", current_event_info.name.c_str());
-            assert(false);
+            // assert(false);
         }
         // setup other generic attributes
         if (!perf_attr_init(&(current_event_info.attr), current_event_info.threshold, PERF_SAMPLE_TID)){
             ERROR("Can't init attribute for event %s", current_event_info.name.c_str());
-            assert(false);
+            // assert(false);
         }
 
         //create the corresponding metric
