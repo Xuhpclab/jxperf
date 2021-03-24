@@ -800,6 +800,7 @@ void Profiler::threadEnd() {
 	        jmethodID method_id = ctxt_ptr->getFrame().method_id;
             _code_cache_manager.checkAndMoveMethodToUncompiledSet(method_id);
     
+            // if (ctxt_ptr->getMetrics() != nullptr && ((ctxt_ptr->getMetrics())->getMetricVal(0))->i > 10 && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) { // leaf node of the redundancy pair
             if (ctxt_ptr->getMetrics() != nullptr && dump_ctxt.find(ctxt_ptr) == dump_ctxt.end()) { // leaf node of the redundancy pair
                 dump_ctxt.insert(ctxt_ptr);
                 xml::XMLObj *obj;

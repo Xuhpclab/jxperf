@@ -131,7 +131,7 @@ static void OnWatchPoint(int signum, siginfo_t *info, void *uCtxt) {
             break;
         }
     }
-    if (false_positive) EMSG("\n A false-positive WP trigger in thread %d\n", gettid()); 
+    if (false_positive) EMSG("\n A false-positive WP trigger in thread %d\n", sys_gettid()); 
 #endif   
 
     //find which watchpoint fired
@@ -145,7 +145,7 @@ static void OnWatchPoint(int signum, siginfo_t *info, void *uCtxt) {
 
     if(location == -1) {
 	// if no existing WP is matched, just ignore and return
-        // EMSG("\n thread %d WP trigger did not match any known active WP\n", gettid());
+        // EMSG("\n thread %d WP trigger did not match any known active WP\n", sys_gettid());
         // tData->insideSigHandler = false;
         return;
     }
@@ -277,14 +277,14 @@ static void CreateWatchPoint(WP_RegisterInfo_t *wpi, int watchLen, WP_Access_t w
         // Deliver the signal to this thread
         struct f_owner_ex fown_ex;
         fown_ex.type = F_OWNER_TID;
-        fown_ex.pid  = gettid();
+        fown_ex.pid  = sys_gettid();
         int ret = fcntl(perf_fd, F_SETOWN_EX, &fown_ex);
         if (ret == -1) {
             EMSG("Failed to set the owner of the perf event file: %s\n", strerror(errno));
             return;
         }
 
-        // CHECK(fcntl(perf_fd, F_SETOWN, gettid()));
+        // CHECK(fcntl(perf_fd, F_SETOWN, sys_gettid()));
 
         wpi->fileHandle = perf_fd;
         // mmap the file if lbr is enabled

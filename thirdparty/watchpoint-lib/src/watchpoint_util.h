@@ -106,7 +106,7 @@ typedef struct WP_Config_t {
 
 
 //************************************Static Methods****************************/
-static inline pid_t gettid() {
+static inline pid_t  sys_gettid() {
     return syscall(__NR_gettid);
 }
 static inline  uint64_t rdtsc(){
