@@ -290,7 +290,7 @@ def output_to_buff(method_manager, context_manager):
             sample.value.append(1)
             sample.value.append(1)
             location_id += 1
-            
+
             print(len(rtrace))
             for trace_node in rtrace:
                 if trace_node.id != 0:
@@ -327,9 +327,9 @@ def output_to_buff(method_manager, context_manager):
                         print("source_lineno:",key.source_lineno)
                     else:
                         print("break")
-                    
+
                     print("-----------------")
-            
+
         f = open("jxperf.pprof", "wb")
         f.write(profile.SerializeToString())
         f.close()
@@ -369,7 +369,7 @@ def output_to_vscode(tid, method_manager, context_manager, ctxt_map, tree_node_m
     intpr = interpreter.Interpreter(method_manager, context_manager)
     rtraces = context_manager.getAllRtrace("0")
     for rtrace in rtraces:
-        # print(len(rtrace))
+        # print("len" + str(len(rtrace)))
         metrics_value = 0
         if len(rtrace) > 0:
             metrics_value = rtrace[0].metrics_dict["value"]
@@ -379,7 +379,9 @@ def output_to_vscode(tid, method_manager, context_manager, ctxt_map, tree_node_m
         for trace_node in rtrace:
             if trace_node.id != 0:
                 key = intpr.getInterpreter_Context(trace_node)
-                if key.ctype < 0:
+                if key.ctype < 0 and len(rtrace) == 2:
+                    break
+                elif key.ctype < 0:
                     continue
                 ctxt_hndl_str = tid + "-" + str(trace_node.id)
                 if ctxt_hndl_str in ctxt_map:
@@ -452,7 +454,7 @@ def recursion_merge_list(node_list, ctxt_map, tree_node_map):
     for node in new_list:
         recursion_merge_list(node["c"], ctxt_map, tree_node_map)
         node_list.append(node)
-    
+
 
 def merge_tree_node(node1, node2, ctxt_map, tree_node_map):
     ctxt_map[node1["ctxt_hndl"]]["value"] += node2["v"]
@@ -463,13 +465,13 @@ def merge_tree_node(node1, node2, ctxt_map, tree_node_map):
     tree_node_map.pop(node2["ctxt_hndl"])
 
     recursion_merge_list(node1["c"], ctxt_map, tree_node_map)
-    
+
 
 def cout_tree_node(root):
     if root == None:
         return 0
     num = 1
-    for child in root["c"]:  
+    for child in root["c"]:
         num += cout_tree_node(child)
     return num
 
@@ -549,8 +551,9 @@ def main():
         # print(tid)
         # output_to_buff(manager_dict["method"], manager_dict[tid])
         thread_tree_root = output_to_vscode(tid, manager_dict["method"], manager_dict[tid], ctxt_map, tree_node_map)
-        
+
         if thread_tree_root:
+            # tree_root['c'].append(thread_tree_root)
             merge_tree_node(tree_root, thread_tree_root, ctxt_map, tree_node_map)
 
     print(cout_tree_node(tree_root))
@@ -564,17 +567,17 @@ def main():
         os.makedirs(drdata_folder)
     with open(drdata_folder + '/ctxt-map.json', 'w') as fp:
         json.dump(ctxt_map, fp)
-    
+
     with open(drdata_folder + '/flame-graph.json', 'w') as fp:
         json.dump(tree_root, fp)
-    
+
     metrics = [
         {
             "Des": "Global CPU Cycles",
             "Type": 1
         }
     ]
-    
+
     with open(drdata_folder + '/metrics.json', 'w') as fp:
         json.dump(metrics, fp)
     # remove_all_files(".")
