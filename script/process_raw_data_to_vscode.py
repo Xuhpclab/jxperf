@@ -369,7 +369,7 @@ def output_to_vscode(tid, method_manager, context_manager, ctxt_map, tree_node_m
     intpr = interpreter.Interpreter(method_manager, context_manager)
     rtraces = context_manager.getAllRtrace("0")
     for rtrace in rtraces:
-        # print(len(rtrace))
+        # print("len" + str(len(rtrace)))
         metrics_value = 0
         if len(rtrace) > 0:
             metrics_value = rtrace[0].metrics_dict["value"]
@@ -379,7 +379,9 @@ def output_to_vscode(tid, method_manager, context_manager, ctxt_map, tree_node_m
         for trace_node in rtrace:
             if trace_node.id != 0:
                 key = intpr.getInterpreter_Context(trace_node)
-                if key.ctype < 0:
+                if key.ctype < 0 and len(rtrace) == 2:
+                    break
+                elif key.ctype < 0:
                     continue
                 ctxt_hndl_str = tid + "-" + str(trace_node.id)
                 if ctxt_hndl_str in ctxt_map:
@@ -551,6 +553,7 @@ def main():
         thread_tree_root = output_to_vscode(tid, manager_dict["method"], manager_dict[tid], ctxt_map, tree_node_map)
         
         if thread_tree_root:
+            # tree_root['c'].append(thread_tree_root)
             merge_tree_node(tree_root, thread_tree_root, ctxt_map, tree_node_map)
 
     print(cout_tree_node(tree_root))
