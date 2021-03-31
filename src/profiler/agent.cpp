@@ -127,7 +127,7 @@ static void JNICALL callbackVMInit(jvmtiEnv *jvmti, JNIEnv* jni, jthread thread)
 
   //Call java agent register_callback
   std::string client_name = GetClientName();
-  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0) {
+  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0 || client_name.compare(REUSE_DISTANCE) == 0) {
     jclass myClass = NULL;
     jmethodID main = NULL;
         
@@ -238,7 +238,7 @@ static void JNICALL callbackCompiledMethodLoad(jvmtiEnv *jvmti_env, jmethodID me
 
   // Call java agent register_callback
   std::string client_name = GetClientName();
-  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0) {
+  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0 || client_name.compare(REUSE_DISTANCE) == 0) {
     if (jni_flag) {
       JNIEnv* _jni = JVM::jni();
       jclass myClass = NULL;
@@ -398,13 +398,13 @@ bool JVM::init(JavaVM *jvm, const char *arg, bool attach) {
   capa.can_get_constant_pool = 1;
   capa.can_generate_monitor_events = 1;
   capa.can_tag_objects = 1;
-  capa.can_generate_sampled_object_alloc_events = 1;
+  // capa.can_generate_sampled_object_alloc_events = 1;
 
   error = _jvmti->AddCapabilities(&capa);
   check_jvmti_error(error, "Unable to get necessary JVMTI capabilities.");
 
   memset(&callbacks, 0, sizeof(callbacks));
-  callbacks.SampledObjectAlloc = &SampledObjectAlloc;
+  // callbacks.SampledObjectAlloc = &SampledObjectAlloc;
   callbacks.VMInit = &callbackVMInit;
   callbacks.VMDeath = &callbackVMDeath;
   callbacks.ThreadStart = &callbackThreadStart;
@@ -418,13 +418,13 @@ bool JVM::init(JavaVM *jvm, const char *arg, bool attach) {
   error = _jvmti->SetEventCallbacks(&callbacks, (jint)sizeof(callbacks));
   check_jvmti_error(error, "Cannot set jvmti callbacks");
 
-  error = _jvmti->SetHeapSamplingInterval(1024 * 1024);
-  check_jvmti_error(error, "Cannot set interval");
+  // error = _jvmti->SetHeapSamplingInterval(1024 * 1024);
+  // check_jvmti_error(error, "Cannot set interval");
 
   ///////////////
   // Init events:
-  error = _jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_SAMPLED_OBJECT_ALLOC, NULL);
-  check_jvmti_error(error, "Cannot set event notification");
+  // error = _jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_SAMPLED_OBJECT_ALLOC, NULL);
+  // check_jvmti_error(error, "Cannot set event notification");
   error = _jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, (jthread)NULL);
   check_jvmti_error(error, "Cannot set event notification");
   error = _jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_DEATH, (jthread)NULL);
