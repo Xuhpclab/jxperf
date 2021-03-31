@@ -145,6 +145,12 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
         return;
     }
 
+    // reuse distance analysis
+    if (clientName.compare(REUSE_DISTANCE) == 0) {
+        ReuseDistanceAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
+        return;
+    }
+
     int accessLen;
     AccessType accessType;
     if (false == get_mem_access_length_and_type(sampleIP, (uint32_t *)(&accessLen), &accessType)) return;
@@ -214,6 +220,15 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
 		assert(metrics->increment(metric_id2, metric_val));
         totalGenericCounter += threshold;
     }
+}
+
+void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
+    printf("into reuse distance analysis\n");
+}
+
+WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
+    printf("into reuse distance watchpoint\n");
+    return WP_DISABLE;
 }
 
 void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
@@ -771,6 +786,7 @@ void Profiler::threadStart() {
     if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
     else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
     else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
+    else if (clientName.compare(REUSE_DISTANCE) == 0) assert(WP_ThreadInit(Profiler::OnReuseDistanceWatchPoint));
     else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0) { 
         ERROR("Can't decode client %s", clientName.c_str());
         assert(false);
@@ -924,5 +940,7 @@ void Profiler::output_statistics() {
     } else if (clientName.compare(ALLOCATION_TIMES) == 0) {
         _statistics_file << clientName << std::endl;
         _statistics_file << grandTotAllocTimes << std::endl;
+    } else if (clientName.compare(REUSE_DISTANCE) == 0) {
+        _statistics_file << clientName << std::endl;
     }
 }
