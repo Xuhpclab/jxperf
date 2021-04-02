@@ -163,7 +163,8 @@ static void OnWatchPoint(int signum, siginfo_t *info, void *uCtxt) {
         .pcPrecise = 0,
         .sampleAccessLen = wpi->sampleAccessLen,
         .sampleValue = &(wpi->sampleValue[0]),
-        .metric_id1 = wpi->metric_id1
+        .metric_id1 = wpi->metric_id1,
+        .counter = wpi->counter
     };
    
     if (wpConfig.isLBREnabled == false) {
@@ -217,7 +218,7 @@ static void OnWatchPoint(int signum, siginfo_t *info, void *uCtxt) {
     return;
 }
 
-static void CreateWatchPoint(WP_RegisterInfo_t *wpi, int watchLen, WP_Access_t watchType, void *va, int accessLen, void *watchCtxt, int metric_id1, bool modify) {
+static void CreateWatchPoint(WP_RegisterInfo_t *wpi, int watchLen, WP_Access_t watchType, void *va, int accessLen, void *watchCtxt, int metric_id1, bool modify, uint64_t counter) {
     // Perf event settings
     struct perf_event_attr pe;
     memset(&pe, 0, sizeof(struct perf_event_attr));
@@ -302,16 +303,17 @@ static void CreateWatchPoint(WP_RegisterInfo_t *wpi, int watchLen, WP_Access_t w
     wpi->watchCtxt = watchCtxt;
     wpi->metric_id1 = metric_id1;
     wpi->startTime = rdtsc();
+    wpi->counter = counter;
 }
 
 
-static bool ArmWatchPoint(WP_RegisterInfo_t *wpi, int watchLen, WP_Access_t watchType, void *va, int accessLen, void *watchCtxt, int metric_id1) {
+static bool ArmWatchPoint(WP_RegisterInfo_t *wpi, int watchLen, WP_Access_t watchType, void *va, int accessLen, void *watchCtxt, int metric_id1, uint64_t counter) {
     // if WP modification is suppoted use it
     if(wpConfig.isWPModifyEnabled) {
         // Does not matter whether it was active or not.
         // If it was not active, enable it.
         if(wpi->fileHandle != -1) {
-            CreateWatchPoint(wpi, watchLen, watchType, va, accessLen, watchCtxt, metric_id1, true);
+            CreateWatchPoint(wpi, watchLen, watchType, va, accessLen, watchCtxt, metric_id1, true, counter);
             return true;
         }
     }
@@ -320,7 +322,7 @@ static bool ArmWatchPoint(WP_RegisterInfo_t *wpi, int watchLen, WP_Access_t watc
     if(wpi->isActive) {
         DisArm(wpi);
     }
-    CreateWatchPoint(wpi, watchLen, watchType, va, accessLen, watchCtxt, metric_id1, false);
+    CreateWatchPoint(wpi, watchLen, watchType, va, accessLen, watchCtxt, metric_id1, false, counter);
     return true;
 }
 
@@ -605,7 +607,7 @@ void WP_ThreadTerminate(){
     free(tData);
 }
 
-bool WP_Subscribe(void *va, int watchLen, WP_Access_t watchType, int accessLen,  void *watchCtxt, int metric_id1, bool isCaptureValue) {
+bool WP_Subscribe(void *va, int watchLen, WP_Access_t watchType, int accessLen,  void *watchCtxt, int metric_id1, bool isCaptureValue, uint64_t counter) {
     if(ValidateWPData(va, watchLen) == false) {
         return false;
     }
@@ -621,7 +623,7 @@ bool WP_Subscribe(void *va, int watchLen, WP_Access_t watchType, int accessLen, 
         if (isCaptureValue) {
             CaptureValue(va, &(tData->watchPointArray[victimLocation].sampleValue[0]), watchLen);
         }
-        if(ArmWatchPoint(&(tData->watchPointArray[victimLocation]), watchLen, watchType, va, accessLen, watchCtxt, metric_id1) == false) {
+        if(ArmWatchPoint(&(tData->watchPointArray[victimLocation]), watchLen, watchType, va, accessLen, watchCtxt, metric_id1, counter) == false) {
             EMSG("ArmWatchPoint failed for address %p", va);
             return false;
         }
