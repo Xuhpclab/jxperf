@@ -51,6 +51,7 @@ uint64_t grandTotSameNUMA = 0;
 uint64_t grandTotDiffNUMA = 0;
 uint64_t grandTotL1Cachemiss = 0;
 uint64_t grandTotGenericCounter = 0;
+uint64_t grandTotMemoryAccessCounter = 0;
 
 thread_local uint64_t totalWrittenBytes = 0;
 thread_local uint64_t totalLoadedBytes = 0;
@@ -64,6 +65,8 @@ thread_local uint64_t totalSameNUMA = 0;
 thread_local uint64_t totalDiffNUMA = 0;
 thread_local uint64_t totalL1Cachemiss = 0;
 thread_local uint64_t totalGenericCounter = 0;
+thread_local uint64_t totalMemoryAccessCounter = 0;
+uint64_t totalMemCounter = 0;
 
 
 thread_local void *prevIP = (void *)0;
@@ -109,6 +112,7 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
 
 
 void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt, int metric_id1, int metric_id2, int metric_id3) {
+    totalMemCounter++;
     if (clientName.compare(GENERIC) != 0 && (!sampleData->isPrecise || !sampleData->addr)) return;
 
     void *sampleIP = (void *)(sampleData->ip);
@@ -147,7 +151,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 
     // reuse distance analysis
     if (clientName.compare(REUSE_DISTANCE) == 0) {
-        ReuseDistanceAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
+        ReuseDistanceAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id1, totalMemCounter);
         return;
     }
 
@@ -195,13 +199,13 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 
     if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0 && accessType != LOAD) {
         totalWrittenBytes += accessLen * threshold;
-        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, false);
+        // WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, false);
     } else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0 && accessType != LOAD) {
         totalWrittenBytes += accessLen * threshold;
-        WP_Subscribe(sampleAddr, watchLen, WP_WRITE, accessLen, watchCtxt, metric_id1, true);
+        // WP_Subscribe(sampleAddr, watchLen, WP_WRITE, accessLen, watchCtxt, metric_id1, true);
     } else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0 && accessType != STORE) { 
         totalLoadedBytes += accessLen * threshold;
-        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, true);
+        // WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, true);
     } else {
         ERROR("Unknown client name: %s or mismatch between the client name: %s and the sampled instruction: %p", clientName.c_str(), clientName.c_str(), sampleIP);
     }
@@ -222,12 +226,61 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
     }
 }
 
-void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
-    printf("into reuse distance analysis\n");
+void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id1, uint64_t counter) {
+
+    void *sampleAddr = (void *)(sampleData->addr);
+    void *sampleIP = (void *)(sampleData->ip);
+
+    void* startaddress;
+	tree_lock.lock();
+	interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)(sampleData->addr), &startaddress);
+	tree_lock.unlock();
+
+    // if (p != NULL) {
+    //     Context *ctxt = p->node_ctxt; 
+	// 	std::stack<Context *> ctxt_stack;
+	// 	while (ctxt != nullptr) {
+	// 		ctxt_stack.push(ctxt);
+	// 	    ctxt = ctxt->getParent();
+	// 	}
+
+	// 	if (!ctxt_stack.empty()) ctxt_stack.pop(); // pop out the root
+		
+	// 	ctxt = nullptr;
+	// 	ContextTree *ctxt_tree = reinterpret_cast<ContextTree *> (TD_GET(context_state));
+	// 	while (!ctxt_stack.empty()) {
+	// 		ContextFrame ctxt_frame = ctxt_stack.top()->getFrame();
+	// 		if (ctxt == nullptr) ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
+	// 		else ctxt = ctxt_tree->addContext(ctxt, ctxt_frame);
+	// 		ctxt_stack.pop();
+	// 	}
+
+        int accessLen;
+        AccessType accessType;
+        if (false == get_mem_access_length_and_type(sampleIP, (uint32_t *)(&accessLen), &accessType)) return;
+        if (accessType == UNKNOWN || accessLen == 0) return;
+        int watchLen = GetFloorWPLength(accessLen);
+
+        Context *watch_context = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
+        if (watch_context == nullptr) return;
+        UpdateNumSamples(watch_context, metric_id1); 
+
+        // totalMemoryAccessCounter++;
+        // totalMemCounter++;
+        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, counter);
+    // }
 }
 
 WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
-    printf("into reuse distance watchpoint\n");
+    if (!profiler_safe_enter()) return WP_DISABLE;
+    //printf("into reuse distance watchpoint\n");
+
+    uint64_t old_count = wpi->counter;
+    uint64_t new_count = totalMemCounter;
+    // uint64_t new_count = grandTotMemoryAccessCounter;
+    printf("old count: %" PRIu64 " new count: %" PRIu64 "\n", old_count, new_count);
+
+    profiler_safe_exit();
     return WP_DISABLE;
 }
 
@@ -758,6 +811,7 @@ void Profiler::threadStart() {
     totalDiffNUMA = 0;
     totalL1Cachemiss = 0;
     totalGenericCounter = 0;
+    totalMemoryAccessCounter = 0;
 
     ThreadData::thread_data_alloc();
     ContextTree *ct_tree = new(std::nothrow) ContextTree();
@@ -880,6 +934,7 @@ void Profiler::threadEnd() {
         __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
         __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
         __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter);
+        __sync_fetch_and_add(&grandTotMemoryAccessCounter, totalMemoryAccessCounter);
     } else {    //attach mode
         output_lock.lock();
         grandTotWrittenBytes += totalWrittenBytes;
@@ -894,6 +949,7 @@ void Profiler::threadEnd() {
         grandTotDiffNUMA += totalDiffNUMA;
         grandTotL1Cachemiss += totalL1Cachemiss;
         grandTotGenericCounter += totalGenericCounter;
+        grandTotMemoryAccessCounter += totalMemoryAccessCounter;
         _statistics_file.seekp(0,std::ios::beg);
         output_statistics();
         output_lock.unlock();
@@ -942,5 +998,6 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotAllocTimes << std::endl;
     } else if (clientName.compare(REUSE_DISTANCE) == 0) {
         _statistics_file << clientName << std::endl;
+        _statistics_file << grandTotMemoryAccessCounter << std::endl;
     }
 }

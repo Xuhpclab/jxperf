@@ -24,6 +24,7 @@ typedef struct WP_TriggerInfo_t{
     int sampleAccessLen;
     void *sampleValue; 
     int metric_id1;
+    uint64_t counter;
     // WP_Access_t trappedAccessType;
 } WP_TriggerInfo_t;
 
@@ -40,7 +41,7 @@ extern bool WP_Init();
 extern void WP_Shutdown();
 extern bool WP_ThreadInit(WP_TrapCallback_t cb_func);
 extern void WP_ThreadTerminate();
-bool WP_Subscribe(void *va, int watchLen, WP_Access_t watchType, int accessLen,  void *watchCtxt, int metric_id1, bool isCaptureValue);
+bool WP_Subscribe(void *va, int watchLen, WP_Access_t watchType, int accessLen,  void *watchCtxt, int metric_id1, bool isCaptureValue, uint64_t counter);
 extern void WP_GetActiveAddresses(void *addrs[], int *numAddr);
 extern void WP_GetActiveWatchPoints(WP_TriggerInfo_t wpt[], int *numActiveWP);
 extern bool WP_IsAltStackAddress(void *addr);
