@@ -265,8 +265,7 @@ void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt
         if (watch_context == nullptr) return;
         UpdateNumSamples(watch_context, metric_id1); 
 
-        // totalMemoryAccessCounter++;
-        // totalMemCounter++;
+        totalMemoryAccessCounter++;
         WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, counter);
     // }
 }
@@ -277,8 +276,7 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
 
     uint64_t old_count = wpi->counter;
     uint64_t new_count = totalMemCounter;
-    // uint64_t new_count = grandTotMemoryAccessCounter;
-    printf("old count: %" PRIu64 " new count: %" PRIu64 "\n", old_count, new_count);
+    std::cout << "old counter: " << old_count << " new counter: " << new_count << std::endl;
 
     profiler_safe_exit();
     return WP_DISABLE;
