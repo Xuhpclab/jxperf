@@ -127,7 +127,7 @@ static void JNICALL callbackVMInit(jvmtiEnv *jvmti, JNIEnv* jni, jthread thread)
 
   //Call java agent register_callback
   std::string client_name = GetClientName();
-  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0 || client_name.compare(REUSE_DISTANCE) == 0) {
+  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0) {
     jclass myClass = NULL;
     jmethodID main = NULL;
         
@@ -238,7 +238,7 @@ static void JNICALL callbackCompiledMethodLoad(jvmtiEnv *jvmti_env, jmethodID me
 
   // Call java agent register_callback
   std::string client_name = GetClientName();
-  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0 || client_name.compare(REUSE_DISTANCE) == 0) {
+  if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0) {
     if (jni_flag) {
       JNIEnv* _jni = JVM::jni();
       jclass myClass = NULL;

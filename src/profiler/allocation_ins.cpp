@@ -61,70 +61,52 @@ namespace {
 }
 }
 
-void empty_splay_tree(interval_tree_node *root) {
-    if(root == NULL)
-        return;
-    empty_splay_tree(LEFT(root));
-    empty_splay_tree(RIGHT(root));
-    free(root);
-}
-
 JNIEXPORT void JNICALL
 Java_com_google_monitoring_runtime_instrumentation_AllocationInstrumenter_clearTree(JNIEnv *env, jobject obj) {
     profiler_safe_enter();
 
-    std::string client_name = GetClientName();
-    if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0) {
-        void* startaddress;
-        interval_tree_node *del_tree;
-        void* new_startingAddr;
-        uint64_t endingAddr;
-        Context *ctxt;
+    void* startaddress;
+    interval_tree_node *del_tree;
+    void* new_startingAddr;
+    uint64_t endingAddr;
+    Context *ctxt;
 
-        tree_lock.lock();
-#if 0
-    empty_splay_tree(splay_tree_root);
-    splay_tree_root = NULL; //splay_tree_root also has been removed in empty_splay tree, we couldn't insert anything if we don't reinitialize it here
-#endif
-
-#if 1
-        relocation_map_lock.lock();
-        for(std::unordered_map<void*, relocation_info_t>::iterator i = relocation_map.begin(); i != relocation_map.end(); i++) {
-            interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)i->second.src, &startaddress);
-            if (p != NULL) {
-                SplayTree::interval_tree_delete(&splay_tree_root, &del_tree, p);
-                new_startingAddr = i->first;
-                endingAddr = (uint64_t)new_startingAddr + (uint64_t)i->second.n;
-                ctxt = p->node_ctxt;
-                interval_tree_node *node = SplayTree::node_make(new_startingAddr, (void*)endingAddr, ctxt);
-                SplayTree::interval_tree_insert(&splay_tree_root, node);
-            }   
-        }
-        relocation_map.clear();
-        relocation_map_lock.unlock();
-        tree_lock.unlock();
-#endif
+    tree_lock.lock();
+    relocation_map_lock.lock();
+    for(std::unordered_map<void*, relocation_info_t>::iterator i = relocation_map.begin(); i != relocation_map.end(); i++) {
+        interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)i->second.src, &startaddress);
+        if (p != NULL) {
+            SplayTree::interval_tree_delete(&splay_tree_root, &del_tree, p);
+            new_startingAddr = i->first;
+            endingAddr = (uint64_t)new_startingAddr + (uint64_t)i->second.n;
+            ctxt = p->node_ctxt;
+            interval_tree_node *node = SplayTree::node_make(new_startingAddr, (void*)endingAddr, ctxt);
+            SplayTree::interval_tree_insert(&splay_tree_root, node);
+        }   
     }
+    relocation_map.clear();
+    relocation_map_lock.unlock();
+    tree_lock.unlock();
+
     profiler_safe_exit();
 }
 
 JNIEXPORT void JNICALL Java_com_google_monitoring_runtime_instrumentation_AllocationInstrumenter_removeReclaimedObjectInSplayTree(JNIEnv *env, jobject obj, jstring addr) {
     profiler_safe_enter();
-    std::string client_name = GetClientName();
-    if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(NUMANODE_CLIENT_NAME) == 0) {
-        interval_tree_node *del_tree;
-        void *startaddress;
-        const char *tmp = env->GetStringUTFChars(addr, 0);
-        char *pend;
-        uint64_t startingAddr = strtol(tmp, &pend, 16);
 
-        tree_lock.lock();
-        interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)startingAddr, &startaddress);
-        if (p != NULL) {
-            SplayTree::interval_tree_delete(&splay_tree_root, &del_tree, p);
-        }
-        tree_lock.unlock();
+    interval_tree_node *del_tree;
+    void *startaddress;
+    const char *tmp = env->GetStringUTFChars(addr, 0);
+    char *pend;
+    uint64_t startingAddr = strtol(tmp, &pend, 16);
+
+    tree_lock.lock();
+    interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)startingAddr, &startaddress);
+    if (p != NULL) {
+        SplayTree::interval_tree_delete(&splay_tree_root, &del_tree, p);
     }
+    tree_lock.unlock();
+
     profiler_safe_exit();
 }
 
