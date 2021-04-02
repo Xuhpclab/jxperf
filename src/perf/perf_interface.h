@@ -6,6 +6,7 @@
 
 #include<vector>
 #include<string>
+#include<iostream>
 
 #include "io.h"
 #include "config.h"

@@ -124,6 +124,7 @@ bool process_event_list(const std::vector<std::string> &event_list){
         std::size_t pos2 = event.find("@");
         if(pos2 != std::string::npos) { // found "@"
             current_event_info.name = event.substr(pos+2, pos2-pos-2);
+            std::cout << "the current event name: " << current_event_info.name << std::endl;
             std::string sample_rate_str = event.substr(pos2+1, std::string::npos);
             current_event_info.threshold = std::stoull(sample_rate_str, nullptr, 10);
             std::string sample_precise_level = event.substr(pos2-1, 1);
@@ -159,8 +160,8 @@ bool process_event_list(const std::vector<std::string> &event_list){
         // extern void SetupWatermarkMetric(int);
         // Watchpoint
         SetupWatermarkMetric(current_event_info.metric_id1);
-        SetupWatermarkMetric(current_event_info.metric_id2);
-        SetupWatermarkMetric(current_event_info.metric_id3);
+        // SetupWatermarkMetric(current_event_info.metric_id2);
+        // SetupWatermarkMetric(current_event_info.metric_id3);
     }
     return true;
 }
