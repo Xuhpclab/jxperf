@@ -199,13 +199,13 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 
     if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0 && accessType != LOAD) {
         totalWrittenBytes += accessLen * threshold;
-        // WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, false);
+        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, false, 0);
     } else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0 && accessType != LOAD) {
         totalWrittenBytes += accessLen * threshold;
-        // WP_Subscribe(sampleAddr, watchLen, WP_WRITE, accessLen, watchCtxt, metric_id1, true);
+        WP_Subscribe(sampleAddr, watchLen, WP_WRITE, accessLen, watchCtxt, metric_id1, true, 0);
     } else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0 && accessType != STORE) { 
         totalLoadedBytes += accessLen * threshold;
-        // WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, true);
+        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, true, 0);
     } else {
         ERROR("Unknown client name: %s or mismatch between the client name: %s and the sampled instruction: %p", clientName.c_str(), clientName.c_str(), sampleIP);
     }
@@ -227,56 +227,41 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
 }
 
 void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id1, uint64_t counter) {
-
     void *sampleAddr = (void *)(sampleData->addr);
     void *sampleIP = (void *)(sampleData->ip);
 
-    void* startaddress;
-	tree_lock.lock();
-	interval_tree_node *p = SplayTree::interval_tree_lookup(&splay_tree_root, (void *)(sampleData->addr), &startaddress);
-	tree_lock.unlock();
+    int accessLen;
+    AccessType accessType;
+    if (false == get_mem_access_length_and_type(sampleIP, (uint32_t *)(&accessLen), &accessType)) return;
+    if (accessType == UNKNOWN || accessLen == 0) return;
+    int watchLen = GetFloorWPLength(accessLen);
 
-    // if (p != NULL) {
-    //     Context *ctxt = p->node_ctxt; 
-	// 	std::stack<Context *> ctxt_stack;
-	// 	while (ctxt != nullptr) {
-	// 		ctxt_stack.push(ctxt);
-	// 	    ctxt = ctxt->getParent();
-	// 	}
+    Context *watch_context = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
+    if (watch_context == nullptr) return;
+    UpdateNumSamples(watch_context, metric_id1);
 
-	// 	if (!ctxt_stack.empty()) ctxt_stack.pop(); // pop out the root
-		
-	// 	ctxt = nullptr;
-	// 	ContextTree *ctxt_tree = reinterpret_cast<ContextTree *> (TD_GET(context_state));
-	// 	while (!ctxt_stack.empty()) {
-	// 		ContextFrame ctxt_frame = ctxt_stack.top()->getFrame();
-	// 		if (ctxt == nullptr) ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
-	// 		else ctxt = ctxt_tree->addContext(ctxt, ctxt_frame);
-	// 		ctxt_stack.pop();
-	// 	}
-
-        int accessLen;
-        AccessType accessType;
-        if (false == get_mem_access_length_and_type(sampleIP, (uint32_t *)(&accessLen), &accessType)) return;
-        if (accessType == UNKNOWN || accessLen == 0) return;
-        int watchLen = GetFloorWPLength(accessLen);
-
-        Context *watch_context = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
-        if (watch_context == nullptr) return;
-        UpdateNumSamples(watch_context, metric_id1); 
-
-        totalMemoryAccessCounter++;
-        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, counter);
-    // }
+    totalMemoryAccessCounter++;
+    WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, counter);
 }
 
 WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
     if (!profiler_safe_enter()) return WP_DISABLE;
-    //printf("into reuse distance watchpoint\n");
 
     uint64_t old_count = wpi->counter;
     uint64_t new_count = totalMemCounter;
     std::cout << "old counter: " << old_count << " new counter: " << new_count << std::endl;
+
+    jmethodID method_id = 0;
+    uint32_t method_version = 0;
+    CodeCacheManager &code_cache_manager = Profiler::getProfiler().getCodeCacheManager();
+    CompiledMethod *method = code_cache_manager.getMethod((uint64_t)(wpi->pc), method_id, method_version);
+    if(method == nullptr) {
+        profiler_safe_exit();
+        return WP_DISABLE;
+    }
+
+    Context *watch_conetxt =(Context *)(wpi->watchCtxt);
+    Context *triggerCtxt = constructContext(_asgct, wpi->uCtxt, (uint64_t)wpi->pc, watch_conetxt, method_id, method_version, 10);
 
     profiler_safe_exit();
     return WP_DISABLE;
