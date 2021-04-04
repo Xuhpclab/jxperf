@@ -249,19 +249,32 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
 
     uint64_t old_count = wpi->counter;
     uint64_t new_count = totalMemCounter;
-    std::cout << "old counter: " << old_count << " new counter: " << new_count << std::endl;
+    // std::cout << "old counter: " << old_count << " new counter: " << new_count << std::endl;
+    uint64_t diff_count = new_count - old_count;
 
     jmethodID method_id = 0;
     uint32_t method_version = 0;
-    CodeCacheManager &code_cache_manager = Profiler::getProfiler().getCodeCacheManager();
-    CompiledMethod *method = code_cache_manager.getMethod((uint64_t)(wpi->pc), method_id, method_version);
-    if(method == nullptr) {
-        profiler_safe_exit();
-        return WP_DISABLE;
-    }
+    // CodeCacheManager &code_cache_manager = Profiler::getProfiler().getCodeCacheManager();
+    // CompiledMethod *method = code_cache_manager.getMethod((uint64_t)(wpi->pc), method_id, method_version);
+    // if(method == nullptr) {
+    //     std::cout << "789" << std::endl;
+    //     profiler_safe_exit();
+    //     return WP_DISABLE;
+    // }
 
-    Context *watch_conetxt =(Context *)(wpi->watchCtxt);
-    Context *triggerCtxt = constructContext(_asgct, wpi->uCtxt, (uint64_t)wpi->pc, watch_conetxt, method_id, method_version, 10);
+    Context *watch_context =(Context *)(wpi->watchCtxt);
+    Context *trigger_context = constructContext(_asgct, wpi->uCtxt, (uint64_t)wpi->pc, watch_context, method_id, method_version, 10);
+
+    if (trigger_context != nullptr) {
+		metrics::ContextMetrics *metrics = trigger_context->getMetrics();
+		if (metrics == nullptr) {
+			metrics = new metrics::ContextMetrics();
+			trigger_context->setMetrics(metrics);
+		}
+		metrics::metric_val_t metric_val;
+		metric_val.i = diff_count;
+		assert(metrics->increment(wpi->metric_id1, metric_val));
+	}
 
     profiler_safe_exit();
     return WP_DISABLE;

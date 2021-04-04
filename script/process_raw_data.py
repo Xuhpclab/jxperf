@@ -15,6 +15,7 @@ isNuma = False
 isGeneric = False
 isHeap = False
 isAllocTimes = False
+isReuseDistance = False
 
 g_thread_context_dict = dict()
 g_method_dict = dict()
@@ -262,6 +263,8 @@ def main():
     global isNuma
     global isGeneric
     global isHeap
+    global isAllocTimes
+    global isReuseDistance
     if result[0] == 'DATACENTRIC':
         isDataCentric = True
         result = result[1:]
@@ -276,6 +279,9 @@ def main():
     elif result[0] == 'ALLOCTIMES':
         isAllocTimes = True
         result = result[1:]
+    elif result[0] == 'REUSEDISTANCE':
+        isReuseDistance = True
+        result = result[1:]
 
     ### read all agent trace files
     manager_dict = init_manager_dict(parse_input_files("."))
@@ -289,7 +295,7 @@ def main():
 
     file = open("agent-data", "w")
 
-    if result and isDataCentric == False and isNuma == False and isGeneric == False and isHeap == False and isAllocTimes == False:
+    if result and isDataCentric == False and isNuma == False and isGeneric == False and isHeap == False and isAllocTimes == False and isReuseDistance == False:
         assert(len(result) == 3 or len(result) == 4)
         deadOrRedBytes = int(result[1])
 
@@ -372,6 +378,15 @@ def main():
             if row[0] != "":
                 file.write(row[0] + "\n\nAllocation Times: " + str(row[-1]) +"\n")
         file.write("\nTotal Allocation Times: " + result[0])
+    elif isReuseDistance == True:
+        file.write("-----------------------Reuse Distance Analysis------------------------------\n")
+
+        rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
+
+        for row in rows:
+            if row[0] != "" and row[0][-1] != "*":
+                file.write(row[0] + "\n\nReuse Distance: " + str(row[-1]) +"\n")
+        file.write("\nTotal Memory Access Times: " + result[0])
 
     file.close()
 
