@@ -65,7 +65,7 @@ thread_local uint64_t totalSameNUMA = 0;
 thread_local uint64_t totalDiffNUMA = 0;
 thread_local uint64_t totalL1Cachemiss = 0;
 thread_local uint64_t totalGenericCounter = 0;
-thread_local uint64_t totalMemoryAccessCounter = 0;
+
 uint64_t totalMemCounter = 0;
 
 
@@ -240,7 +240,6 @@ void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt
     if (watch_context == nullptr) return;
     UpdateNumSamples(watch_context, metric_id1);
 
-    totalMemoryAccessCounter++;
     WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, counter);
 }
 
@@ -254,13 +253,6 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
 
     jmethodID method_id = 0;
     uint32_t method_version = 0;
-    // CodeCacheManager &code_cache_manager = Profiler::getProfiler().getCodeCacheManager();
-    // CompiledMethod *method = code_cache_manager.getMethod((uint64_t)(wpi->pc), method_id, method_version);
-    // if(method == nullptr) {
-    //     std::cout << "789" << std::endl;
-    //     profiler_safe_exit();
-    //     return WP_DISABLE;
-    // }
 
     Context *watch_context =(Context *)(wpi->watchCtxt);
     Context *trigger_context = constructContext(_asgct, wpi->uCtxt, (uint64_t)wpi->pc, watch_context, method_id, method_version, 10);
@@ -807,7 +799,6 @@ void Profiler::threadStart() {
     totalDiffNUMA = 0;
     totalL1Cachemiss = 0;
     totalGenericCounter = 0;
-    totalMemoryAccessCounter = 0;
 
     ThreadData::thread_data_alloc();
     ContextTree *ct_tree = new(std::nothrow) ContextTree();
@@ -930,7 +921,6 @@ void Profiler::threadEnd() {
         __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
         __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
         __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter);
-        __sync_fetch_and_add(&grandTotMemoryAccessCounter, totalMemoryAccessCounter);
     } else {    //attach mode
         output_lock.lock();
         grandTotWrittenBytes += totalWrittenBytes;
@@ -945,7 +935,6 @@ void Profiler::threadEnd() {
         grandTotDiffNUMA += totalDiffNUMA;
         grandTotL1Cachemiss += totalL1Cachemiss;
         grandTotGenericCounter += totalGenericCounter;
-        grandTotMemoryAccessCounter += totalMemoryAccessCounter;
         _statistics_file.seekp(0,std::ios::beg);
         output_statistics();
         output_lock.unlock();
@@ -994,6 +983,6 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotAllocTimes << std::endl;
     } else if (clientName.compare(REUSE_DISTANCE) == 0) {
         _statistics_file << clientName << std::endl;
-        _statistics_file << grandTotMemoryAccessCounter << std::endl;
+        _statistics_file << totalMemCounter << std::endl;
     }
 }
