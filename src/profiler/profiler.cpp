@@ -52,6 +52,7 @@ uint64_t grandTotDiffNUMA = 0;
 uint64_t grandTotL1Cachemiss = 0;
 uint64_t grandTotGenericCounter = 0;
 uint64_t grandTotMemoryAccessCounter = 0;
+uint64_t totalMemCounter = 0;
 
 thread_local uint64_t totalWrittenBytes = 0;
 thread_local uint64_t totalLoadedBytes = 0;
@@ -65,8 +66,6 @@ thread_local uint64_t totalSameNUMA = 0;
 thread_local uint64_t totalDiffNUMA = 0;
 thread_local uint64_t totalL1Cachemiss = 0;
 thread_local uint64_t totalGenericCounter = 0;
-
-uint64_t totalMemCounter = 0;
 
 
 thread_local void *prevIP = (void *)0;
@@ -248,7 +247,6 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
 
     uint64_t old_count = wpi->counter;
     uint64_t new_count = totalMemCounter;
-    // std::cout << "old counter: " << old_count << " new counter: " << new_count << std::endl;
     uint64_t diff_count = new_count - old_count;
 
     jmethodID method_id = 0;
