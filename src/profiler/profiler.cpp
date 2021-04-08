@@ -29,9 +29,11 @@ ASGCT_FN Profiler::_asgct = nullptr;
 std::string clientName;
 
 static SpinLock lock_map;
+static SpinLock lock_rdx_map;
 SpinLock tree_lock;
 interval_tree_node *splay_tree_root = NULL;
 static std::unordered_map<Context*, Context*> map = {};
+static std::unordered_map<uint64_t, uint64_t> rdx_map = {};
 extern bool jni_flag;
 extern bool onload_flag;
 static SpinLock output_lock;
@@ -248,6 +250,13 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
     uint64_t old_count = wpi->counter;
     uint64_t new_count = totalMemCounter;
     uint64_t diff_count = new_count - old_count;
+    if (diff_count == 0)
+        diff_count = 1;
+
+    lock_rdx_map.lock();
+    rdx_map[diff_count]++;
+    std::cout << "reuse_dist: " << diff_count << " count: " << rdx_map[diff_count]++ << std::endl;
+    lock_rdx_map.unlock();
 
     jmethodID method_id = 0;
     uint32_t method_version = 0;
