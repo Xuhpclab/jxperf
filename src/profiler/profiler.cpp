@@ -28,6 +28,7 @@ Profiler Profiler::_instance;
 ASGCT_FN Profiler::_asgct = nullptr;
 std::string clientName;
 
+
 static SpinLock lock_map;
 static SpinLock lock_rdx_map;
 SpinLock tree_lock;
@@ -38,6 +39,7 @@ extern bool jni_flag;
 extern bool onload_flag;
 static SpinLock output_lock;
 
+uint32_t period = 0;
 uint64_t GCCounter = 0;
 thread_local uint64_t localGCCounter = 0;
 
@@ -112,8 +114,9 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
 }
 
 
-void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt, int metric_id1, int metric_id2, int metric_id3) {
+void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt, uint32_t samplePeriod, int metric_id1, int metric_id2, int metric_id3) {
     totalMemCounter++;
+    period = samplePeriod;
     if (clientName.compare(GENERIC) != 0 && (!sampleData->isPrecise || !sampleData->addr)) return;
 
     void *sampleIP = (void *)(sampleData->ip);
@@ -255,7 +258,7 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
 
     lock_rdx_map.lock();
     rdx_map[diff_count]++;
-    std::cout << "reuse_dist: " << diff_count << " count: " << rdx_map[diff_count]++ << std::endl;
+    // std::cout << "reuse_dist: " << diff_count << " count: " << rdx_map[diff_count] << std::endl;
     lock_rdx_map.unlock();
 
     jmethodID method_id = 0;
@@ -768,6 +771,7 @@ void Profiler::init() {
     _method_file << XML_FILE_HEADER << std::endl;
 #endif
 
+    _rdx_file.open("rdx.run");
     _statistics_file.open("agent-statistics.run");
     ThreadData::thread_data_init();
     
@@ -786,6 +790,11 @@ void Profiler::shutdown() {
         output_statistics(); 
         _statistics_file.close();
         _method_file.close();
+        if (clientName.compare(REUSE_DISTANCE) == 0) {
+            for (std::unordered_map<uint64_t, uint64_t>::iterator it  = rdx_map.begin(); it != rdx_map.end(); it++) {
+                _rdx_file << it->first << " " << it->second << std::endl;
+            }
+        }
     }
 }
 
@@ -991,5 +1000,6 @@ void Profiler::output_statistics() {
     } else if (clientName.compare(REUSE_DISTANCE) == 0) {
         _statistics_file << clientName << std::endl;
         _statistics_file << totalMemCounter << std::endl;
+        _statistics_file << period << std::endl;
     }
 }
