@@ -306,7 +306,7 @@ void perf_event_handler(int sig, siginfo_t* siginfo, void* context){
 	        sample_data.isPrecise = (ehdr.misc & PERF_RECORD_MISC_EXACT_IP) ? true : false;
             perf_read_record_sample(current->mmap_buf, current->event->attr.sample_type, &sample_data);
             //if (!inside_sig_unsafe_func)
-                user_sample_cb(current->id, &sample_data, context, current->event->metric_id1, current->event->metric_id2, current->event->metric_id3);
+                user_sample_cb(current->id, &sample_data, context, current->event->threshold, current->event->metric_id1, current->event->metric_id2, current->event->metric_id3);
         }
         else {
             if (ehdr.size == 0) {
