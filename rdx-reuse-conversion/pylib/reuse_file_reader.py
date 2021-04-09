@@ -40,6 +40,7 @@ def hpcrun_old_reader(file_path):
 			reuse_lines.append(l.replace("REUSE_DISTANCE:", ""))
 	assert(reuse_lines)
 	for i,l in enumerate(reuse_lines):
+		i += 1
 		d_val, d_enabling, d_running, inc = list(map(int, l.split()))
 		if d_enabling == 0 or d_running == 0:
 			reuse_distance = 1
@@ -201,7 +202,6 @@ def hpcrun_reader(file_path):
 			else: ## maybe just assign 1 ??
 				#print("THIRD TIME: FAIL")
 				reuse_values[i][j] = 1
-
 	'''
 
 	if False :

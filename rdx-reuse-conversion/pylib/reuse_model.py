@@ -51,10 +51,12 @@ class Histogram:
         self.intervals = list(intervals)
 
     def __iter__(self):
+        """get interval"""
         for i in range(0, len(self.count_list)):
             yield (self.intervals[i],self.intervals[i+1]), self.count_list[i], self.fraction_list[i]
 
     def __len__(self):
+        """"get count_list"""
         return len(self.count_list)
 
     def getFraction(self, index : int):
@@ -78,6 +80,7 @@ nCr = scipy.special.comb
 class Tdh2RdhModel:
     #Refer to the paper [Locality Approximation using time] for theory.
     def __init__(self, tdh: dict, N, T):
+        """Time distance histogram to reuse distance histogram Model"""
         #N: the total number of distinct data, i.e., footprint
         #T: the total time-points in an execution, i.e., the number of accesses
         self._N = N
@@ -108,9 +111,8 @@ class Tdh2RdhModel:
         ## return the probability that [v]'s last access prior to [t] is at time [t] - [tau]
         if tau in self._P2_memo:
             return self._P2_memo[tau]
-        '''
-        res = sum(( self.P1(delta) / (delta - 1)  for delta in range(tau + 1, self._T +1)) )
-        '''
+
+        # res = sum(( self.P1(delta) / (delta - 1)  for delta in range(tau + 1, self._T +1)) )
 
         res = sum(( self.Pt(delta) for delta in range(tau+1, self._T + 1)))
         res /= (self._N - 1)
@@ -182,6 +184,7 @@ class Tdh2RdhModel:
 class Tdh2RdhModelExt:
     #Refer to the paper [Accurate Approximation of Locality from Time Distance Histograms] for theory.
     def __init__(self, tdh: Histogram, N, T):
+        """Time distance histogram to reuse distance histogram Model (extended)"""
         #N: the total number of distinct data, i.e., footprint
         #T: the total time-points in an execution, i.e., the number of accesses
         self._N = N
