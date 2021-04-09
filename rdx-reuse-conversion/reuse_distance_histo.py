@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 #import scipy
-import collections
+#import collections
 import argparse
 from pylib import *
-import cProfile
-import bisect
-from termcolor import colored
-import io
+#import cProfile
+#import bisect
+#from termcolor import colored
+#import io
 import subprocess
 ## tunable parameters
 g_length_per_percent = 2
@@ -82,7 +82,6 @@ def process_input(input_file, output):
 		print(reuse_histo)
 
 		# reuse_histo = reading_result["histo"]
-		
 		# #test
 		# reuse_histo = {1: 280836432, 2485.0: 496727, 10000: 100000000000}
 		# print(reuse_histo)
