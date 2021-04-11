@@ -123,10 +123,10 @@ def process_input(input_file, output):
 
 
 def main():
-    global num_accesses
+	global num_accesses
 	global num_elements
     
-	subprocess.run(["python2", "./script/mem_overhead.py", "java", "-jar", "./benchmark/dacapo.jar", "-s", "large", "lusearch"])
+	subprocess.run(["python2", "./rdx-script/mem_overhead.py", "java", "-jar", "./benchmark/dacapo.jar", "-s", "large", "lusearch"])
 	file_memory_usage = open("peak_memory.run", "r")
 	result_memory_usage = file_memory_usage.read().splitlines()
 	file_memory_usage.close()

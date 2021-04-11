@@ -1,15 +1,15 @@
 import sys
 import os
-import getopt
-import copy
-import random
+#import getopt
+#import copy
+#import random
 import shlex, subprocess
 import time
 import fcntl
-import fnmatch
-import ntpath
-import shutil
-import csv
+#import fnmatch
+#import ntpath
+#import shutil
+#import csv
 import threading
 from fcntl import flock, LOCK_EX, LOCK_SH, LOCK_UN, LOCK_NB
 
@@ -37,7 +37,7 @@ class MemMonitor(threading.Thread):
            count += 1
            accu_size += long(sout)
            time.sleep(.001)
-       print('ok1' + str(accu_size/count))
+       print(accu_size/count)
 
 def MemRun(command, input, output=True):
     t1 = time.time()
@@ -55,7 +55,7 @@ def MemRun(command, input, output=True):
     if output:
         sys.stdout.write(sout)
         sys.stderr.write(serr)
-    t = t2 - t1
+    #t = t2 - t1
     return  thread1.peak
 
 
