@@ -42,7 +42,6 @@ namespace {
         last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
     else
         last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame);       
-    
 
     if (client_name.compare(DATA_CENTRIC_CLIENT_NAME) == 0 || client_name.compare(ALLOCATION_TIMES) == 0) {
         metrics::ContextMetrics *metrics = last_ctxt->getMetrics();

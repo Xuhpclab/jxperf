@@ -16,6 +16,7 @@ g_time_distance_range_plan = None
 g_stack_distance_range_plan = None
 
 num_accesses = 0
+num_elements = 0
 
 #def print2Str(*args, **kwargs):
 	#output = io.StringIO()
@@ -122,12 +123,15 @@ def process_input(input_file, output):
 
 
 def main():
+    global num_accesses
+	global num_elements
     
-	#python2 mem_overhead.py java -jar ${CUR_DIR}/benchmark/dacapo.jar -s large lusearch
-	#subprocess.run(["ls", "-l"])
-	subprocess.run(["python2", "mem_overhead.py", "java", "-jar", "./benchmark/dacapo.jar", "-s", "large", "lusearch"])
-
-	global num_accesses
+	subprocess.run(["python2", "./script/mem_overhead.py", "java", "-jar", "./benchmark/dacapo.jar", "-s", "large", "lusearch"])
+	file_memory_usage = open("peak_memory.run", "r")
+	result_memory_usage = file_memory_usage.read().splitlines()
+	file_memory_usage.close()
+	num_elements = result_memory_usage[0]
+	print(result_memory_usage[0])
 
 	file = open("agent-statistics.run", "r")
 	result = file.read().splitlines()

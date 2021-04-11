@@ -115,7 +115,6 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
 
 
 void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt, uint32_t samplePeriod, int metric_id1, int metric_id2, int metric_id3) {
-    totalMemCounter++;
     period = samplePeriod;
     if (clientName.compare(GENERIC) != 0 && (!sampleData->isPrecise || !sampleData->addr)) return;
 
@@ -155,7 +154,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 
     // reuse distance analysis
     if (clientName.compare(REUSE_DISTANCE) == 0) {
-        ReuseDistanceAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id1, totalMemCounter);
+        ReuseDistanceAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id1);
         return;
     }
 
@@ -230,7 +229,8 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
     }
 }
 
-void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id1, uint64_t counter) {
+void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id1) {
+    totalMemCounter++;
     void *sampleAddr = (void *)(sampleData->addr);
     void *sampleIP = (void *)(sampleData->ip);
 
@@ -244,7 +244,7 @@ void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt
     if (watch_context == nullptr) return;
     UpdateNumSamples(watch_context, metric_id1);
 
-    WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, counter);
+    WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, totalMemCounter);
 }
 
 WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
@@ -258,7 +258,7 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
 
     lock_rdx_map.lock();
     rdx_map[diff_count]++;
-    // std::cout << "reuse_dist: " << diff_count << " count: " << rdx_map[diff_count] << std::endl;
+    std::cout << "reuse_dist: " << diff_count << " count: " << rdx_map[diff_count] << std::endl;
     lock_rdx_map.unlock();
 
     jmethodID method_id = 0;
@@ -1000,6 +1000,6 @@ void Profiler::output_statistics() {
     } else if (clientName.compare(REUSE_DISTANCE) == 0) {
         _statistics_file << clientName << std::endl;
         _statistics_file << totalMemCounter << std::endl;
-        _statistics_file << period << std::endl;
+        _statistics_file << totalMemCounter*period << std::endl;
     }
 }
