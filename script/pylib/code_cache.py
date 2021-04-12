@@ -1,5 +1,5 @@
 import bintrees
-import types
+#import types
 import copy
 def str2int(s):
     if type(s) is int: ##it is already an int

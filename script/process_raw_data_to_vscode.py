@@ -4,7 +4,7 @@ import os
 import sys
 from pylib import *
 from multiprocessing.dummy import Pool as ThreadPool
-from functools import partial
+#from functools import partial
 
 import re
 import xml.etree.ElementTree as ET
