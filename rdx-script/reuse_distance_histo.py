@@ -106,20 +106,20 @@ def process_input(input_file, output):
 			assert(False)
 
 	print(num_accesses)
-	# model = reuse_model.Tdh2RdhModelExt(histo, num_elements , num_accesses)
-	# print("g_stack_distance_range_plan", g_stack_distance_range_plan)
-	# stack_range_list =  config.stack_distance_range_list(g_stack_distance_range_plan)
-	# stack_intervals = [ r[0] for r in stack_range_list] +[ stack_range_list[-1][1] ]
-	# histo = reuse_model.Histogram({0:1}, stack_intervals, None, None)
+	model = reuse_model.Tdh2RdhModelExt(histo, num_elements , num_accesses)
+	print("g_stack_distance_range_plan", g_stack_distance_range_plan)
+	stack_range_list =  config.stack_distance_range_list(g_stack_distance_range_plan)
+	stack_intervals = [ r[0] for r in stack_range_list] +[ stack_range_list[-1][1] ]
+	histo = reuse_model.Histogram({0:1}, stack_intervals, None, None)
 
-	# stack_distance_range_list = histo.getRanges()
-	# rdh = model.getRdh(stack_distance_range_list)
-	# #print(sum(rdh))
-	# report_collection(stack_distance_range_list, rdh)
+	stack_distance_range_list = histo.getRanges()
+	rdh = model.getRdh(stack_distance_range_list)
+	#print(sum(rdh))
+	report_collection(stack_distance_range_list, rdh)
 
-	# with open(output, "w") as f:
-	# 	for r, b in zip(stack_distance_range_list, rdh):
-	# 		f.write(" ".join([str(r[0]),str(r[1]), str(b)])+"\n")
+	with open(output, "w") as f:
+		for r, b in zip(stack_distance_range_list, rdh):
+			f.write(" ".join([str(r[0]),str(r[1]), str(b)])+"\n")
 
 
 def main():
@@ -130,7 +130,7 @@ def main():
 	file_memory_usage = open("peak_memory.run", "r")
 	result_memory_usage = file_memory_usage.read().splitlines()
 	file_memory_usage.close()
-	num_elements = result_memory_usage[0]
+	num_elements = int(result_memory_usage[0]) * 1024 // 16
 	print(result_memory_usage[0])
 
 	file = open("agent-statistics.run", "r")

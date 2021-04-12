@@ -11,7 +11,7 @@ import fcntl
 #import shutil
 #import csv
 import threading
-from fcntl import flock, LOCK_EX, LOCK_SH, LOCK_UN, LOCK_NB
+from fcntl import flock, LOCK_EX, LOCK_SH, LOCK_UN
 
 
 #--------------------------------------
@@ -40,7 +40,7 @@ class MemMonitor(threading.Thread):
        print(accu_size/count)
 
 def MemRun(command, input, output=True):
-    t1 = time.time()
+    #t1 = time.time()
     process = subprocess.Popen(shlex.split(command),bufsize=-1,shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # launch a side thread to monitor the peak memory
@@ -48,7 +48,7 @@ def MemRun(command, input, output=True):
     thread1.start()
 
     (sout, serr) = process.communicate(input)
-    t2 = time.time()
+    #t2 = time.time()
 
     thread1.join()
     #assert(process.returncode == 0)
