@@ -51,9 +51,6 @@ def process_input(input_file, output):
 	# 	print("Only time reuse file is accepted.")
 	# 	return
 
-
-
-
 	# for item in ["file_type", "num_records", "num_accesses", "num_elements", "max_memory_size"]:
 	# 	if item in reading_result:
 	# 		print(item+":", reading_result[item])
@@ -80,15 +77,15 @@ def process_input(input_file, output):
 		for line in rdx_file:
 			key, value = line.split()
 			reuse_histo[int(key)] = int(value)
-		print(reuse_histo)
+		# print(reuse_histo)
 
 		# reuse_histo = reading_result["histo"]
 		# #test
 		# reuse_histo = {1: 280836432, 2485.0: 496727, 10000: 100000000000}
 		# print(reuse_histo)
 
-		total_count = sum(reuse_histo.values())
-		print(total_count)
+		# total_count = sum(reuse_histo.values())
+		# print(total_count)
 
 		if reading_result["file_type"] == "rdx":
 			reuse_histo = calibration.hpcrun_calibration(reuse_histo, "10M")
@@ -105,7 +102,7 @@ def process_input(input_file, output):
 		else: ## no such plan
 			assert(False)
 
-	print(num_accesses)
+	#print(num_accesses)
 	model = reuse_model.Tdh2RdhModelExt(histo, num_elements , num_accesses)
 	print("g_stack_distance_range_plan", g_stack_distance_range_plan)
 	stack_range_list =  config.stack_distance_range_list(g_stack_distance_range_plan)
@@ -130,14 +127,15 @@ def main():
 	file_memory_usage = open("peak_memory.run", "r")
 	result_memory_usage = file_memory_usage.read().splitlines()
 	file_memory_usage.close()
-	num_elements = int(result_memory_usage[0]) * 1024 // 16
-	print(result_memory_usage[0])
+	num_elements = int(result_memory_usage[-1]) * 1024 // 16
+	print(num_elements)
 
 	file = open("agent-statistics.run", "r")
 	result = file.read().splitlines()
 	file.close()
 	result = result[1:]
-	num_accesses = result[1]
+	num_accesses = int(result[0]) / 1
+	print(num_accesses)
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument("input_file", help="the path to the hpcrun or time reuse data file")
