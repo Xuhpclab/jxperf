@@ -37,7 +37,7 @@ class MemMonitor(threading.Thread):
            count += 1
            accu_size += long(sout)
            time.sleep(.001)
-       print(accu_size/count)
+       #print(accu_size/count)
 
 def MemRun(command, input, output=True):
     #t1 = time.time()
