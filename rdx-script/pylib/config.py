@@ -85,14 +85,6 @@ def time_distance_range_list(plan = "L1"):
 	return [ (1000*a, 1000*b) for (a, b) in list(zip(exp_list, exp_list[1:]))[0:20] ]
 
 def stack_distance_range_list(plan="L3"):
-	#linear_list = list(range(int(1E6), int(4.1E6), int(1.5E5)))
-	#return [(a,b) for (a,b) in list(zip(linear_list, linear_list[1:])) ]
-	#exp_list = [0] + [ 2**i for i in range(2, 100)]
-	#return [ (1000 *a, 1000*b) for (a, b) in list(zip(exp_list, exp_list[1:]))[0:20] ]
-
-	#exp_list = [0] + get_exp_list(4, 2097152, 9)
-	#assert(len(exp_list) == 11)
-	#return [ (1000 *a, 1000*b) for (a, b) in zip(exp_list, exp_list[1:])]
 	return time_distance_range_list(plan)
 
 
