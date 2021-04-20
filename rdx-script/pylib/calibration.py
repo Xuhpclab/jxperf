@@ -1,5 +1,3 @@
-
-
 import collections
 
 def hpcrun_calibration(reuse_histo, plan):
