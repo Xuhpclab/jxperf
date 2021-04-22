@@ -187,23 +187,6 @@ def hpcrun_reader(file_path):
 					copy_val = reuse_values[index_list[found]][metric_index]
 					reuse_values[line_index][metric_index] = copy_val
 
-	'''
-	## third time: estimate based on the neighborhood
-	for i, v_list in enumerate(reuse_values):
-		for j, v in enumerate(v_list):
-			if v != None: continue
-			#found = backForthFind(reuse_values, i, lambda x: x[j] != None)
-			found = backForthFind(reuse_buffers, i, lambda x: x[j][0] != 0)
-			if found >= 0:
-				#print("THIRD TIME: Success")
-				#reuse_values[i][j] = reuse_values[found][j]
-				reuse_values[i][j] = reuse_buffers[i][j][1] * (reuse_buffers[found][j][0]/reuse_buffers[found][j][2])
-				#print("THIRD TIME: Success", reuse_values[i][j])
-			else: ## maybe just assign 1 ??
-				#print("THIRD TIME: FAIL")
-				reuse_values[i][j] = 1
-	'''
-
 	if False :
 		merged_reuse_values = []
 		for val_list  in reuse_values:
@@ -223,69 +206,7 @@ def hpcrun_reader(file_path):
 		ret_histo[val] += max(1,inc)
 		#ret_histo[sum(reuse_list)] += 1 ##jqswang: disable proportional attribution
 	#[ print("inc", inc) for inc in inc_list]
-	'''
-	## parse "REUSE_DISTANCE:" lines
-	delayed_processing_lines = []
-	context_reuse_distance_dict = collections.defaultdict()
-	def setRecord(ctxt, index, val):
-		identifier = "#".join([ctxt,str(index)])
-		context_reuse_distance_dict[identifier] = val
-	def getEstimation(ctxt, index):
-		identifier = "#".join([ctxt,str(index)])
-		if identifier in context_reuse_distance_dict:
-			return context_reuse_distance_dict[identifier]
-		else:
-			return None
 
-
-	def parseLine(line, remeber_flag):
-		seg1, *remains =  l.split(",")
-		ctxt1, ctxt2, inc = seg1.split()
-		inc = int(inc)
-		ctxt = "#".join([ctxt1, ctxt2])
-		sub_reuse_list = []
-		for i,seg in enumerate(remains):
-			d_val, d_enabling, d_running = seg.split()
-			#if d_enabling == 0: continue
-			if d_running == 0: ##estimation
-				sub_reuse_list.append(getEstimation(ctxt, i))
-			else:
-				r = d_val * (d_enabling / d_running)
-				if remeber_flag: setRecord(ctxt,i, r)
-				sub_reuse_list.append(r)
-		if all(map(lambda x: x!=None, sub_reuse_list)): ## reuse_distance can be successfully obtained
-			num_records += 1
-			reuse_distance = sum(sub_reuse_list)
-			ret_histo[reuse_distance] += inc
-			return True
-		return False
-
-
-	for l in reuse_lines:
-		if not parseLine(l, True):
-			delayed_processing_lines.append(l)
-		i = 0
-		while i < len(delayed_processing_lines):
-			if parseLine(delayed_processing_lines[i], False):
-				del delayed_processing_lines[i]
-			i += 1
-	for l in delayed_processing_lines:
-		seg1, *remains =  l.split(",")
-		ctxt1, ctxt2, inc = seg1.split()
-		inc = int(inc)
-		sub_reuse_list = []
-		for i,seg in enumerate(remains):
-			d_val, d_enabling, d_running = seg.split()
-			#if d_enabling == 0: continue
-			if d_running == 0: ##estimation
-				sub_reuse_list.append(1)
-			else:
-				r = d_val * (d_enabling / d_running)
-				sub_reuse_list.append(r)
-		num_records += 1
-		reuse_distance = sum(sub_reuse_list)
-		ret_histo[reuse_distance] += inc
-	'''
 	assert(len(final_val_list) == len(inc_list))
 	assert(len(inc_list) == len(ctxt_list))
 	return {"file_type":"hpcrun", "num_records": num_records, "histo": ret_histo, "num_accesses": num_accesses, "max_memory_size": max_memory_size, "num_metrics": num_metrics, "attribution_details":list(zip(ctxt_list, final_val_list,inc_list ) ) }
