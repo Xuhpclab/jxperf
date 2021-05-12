@@ -70,6 +70,9 @@ thread_local uint64_t totalDiffNUMA = 0;
 thread_local uint64_t totalL1Cachemiss = 0;
 thread_local uint64_t totalGenericCounter = 0;
 
+thread_local uint64_t loadPeriod = 0;
+thread_local uint64_t storePeriod = 0;
+
 
 thread_local void *prevIP = (void *)0;
 
@@ -105,7 +108,7 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
     // It's sort of tricky. Use bci to split a context pair.
     if (ctxt == nullptr && last_ctxt != nullptr) ctxt_frame.bci = -65536;
     if (last_ctxt != nullptr) last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame);
-    // else last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
+    else last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
     
     return last_ctxt;
 }
@@ -152,7 +155,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 
     // reuse distance analysis
     if (clientName.compare(REUSE_DISTANCE) == 0) {
-        ReuseDistanceAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id1);
+        ReuseDistanceAnalysis(eventID, sampleData, uCtxt, method_id, method_version, threshold, metric_id1);
         return;
     }
 
@@ -200,13 +203,13 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 
     if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0 && accessType != LOAD) {
         totalWrittenBytes += accessLen * threshold;
-        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, false, 0);
+        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, false, 0, 0, 0, 0, 0, 0);
     } else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0 && accessType != LOAD) {
         totalWrittenBytes += accessLen * threshold;
-        WP_Subscribe(sampleAddr, watchLen, WP_WRITE, accessLen, watchCtxt, metric_id1, true, 0);
+        WP_Subscribe(sampleAddr, watchLen, WP_WRITE, accessLen, watchCtxt, metric_id1, true, 0, 0, 0, 0, 0, 0);
     } else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0 && accessType != STORE) { 
         totalLoadedBytes += accessLen * threshold;
-        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, true, 0);
+        WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watchCtxt, metric_id1, true, 0, 0, 0, 0, 0, 0);
     } else {
         ERROR("Unknown client name: %s or mismatch between the client name: %s and the sampled instruction: %p", clientName.c_str(), clientName.c_str(), sampleIP);
     }
@@ -227,9 +230,24 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
     }
 }
 
-void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id1) {
-    // totalMemCounter++;
-    totalMemCounter += threshold;
+void Profiler::ReuseDistanceAnalysis(int eventID, perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id1) {
+    
+    if (eventID == 0)
+        loadPeriod++;
+    if (eventID == 1)
+        storePeriod++;
+
+    uint64_t loadCounter[3];
+    uint64_t storeCounter[3];
+    assert(PerfManager::readCounter(0, loadCounter));
+    assert(PerfManager::readCounter(1, storeCounter));
+
+    std::cout << "use: eventID: " << eventID << std::endl;
+    std::cout << "use: load period: " << loadPeriod << std::endl;
+    std::cout << "use: store period: " << storePeriod << std::endl;
+    std::cout << "use: loadCounter value: " << loadCounter[0] << " time enabling: " << loadCounter[1] << " time running: " << loadCounter[2] << std::endl;
+    std::cout << "use: storeCounter value: " << storeCounter[0] << " time enabling: " << storeCounter[1] << " time running: " << storeCounter[2] << std::endl;
+
     void *sampleAddr = (void *)(sampleData->addr);
     void *sampleIP = (void *)(sampleData->ip);
 
@@ -243,39 +261,68 @@ void Profiler::ReuseDistanceAnalysis(perf_sample_data_t *sampleData, void *uCtxt
     if (watch_context == nullptr) return;
     UpdateNumSamples(watch_context, metric_id1);
 
-    WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, totalMemCounter);
+    WP_Subscribe(sampleAddr, watchLen, WP_RW, accessLen, watch_context, metric_id1, false, threshold, loadCounter[0], storeCounter[0], eventID, loadPeriod, storePeriod);
 }
 
 WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
     if (!profiler_safe_enter()) return WP_DISABLE;
 
-    uint64_t old_count = wpi->counter;
-    uint64_t new_count = totalMemCounter;
-    uint64_t diff_count = new_count - old_count;
-    if (diff_count == 0)
-        diff_count = 1;
+    uint64_t loadCounter[3];
+    uint64_t storeCounter[3];
+    assert(PerfManager::readCounter(0, loadCounter));
+    assert(PerfManager::readCounter(1, storeCounter));
 
-    lock_rdx_map.lock();
-    rdx_map[diff_count]++;
-    // std::cout << "reuse_dist: " << diff_count << " count: " << rdx_map[diff_count] << std::endl;
-    lock_rdx_map.unlock();
+    uint64_t diffCounter;
 
-    jmethodID method_id = 0;
-    uint32_t method_version = 0;
+    if (wpi->eventID == 0) {
+        loadPeriod++;
+        std::cout << "reuse: eventID: " << wpi->eventID << std::endl;
+        std::cout << "reuse: load period: " << loadPeriod << std::endl;
+        std::cout << "reuse: store period: " << storePeriod << std::endl;
+        std::cout << "reuse: loadCounter value: " << loadCounter[0] << " time enabling: " << loadCounter[1] << " time running: " << loadCounter[2] << std::endl;
+        std::cout << "reuse: storeCounter value: " << storeCounter[0] << " time enabling: " << storeCounter[1] << " time running: " << storeCounter[2] << std::endl;
+        
+        loadCounter[0] = (loadPeriod - wpi->loadPeriod - 1) * wpi->threshold + loadCounter[0];
+        storeCounter[0] = (storePeriod - wpi->storePeriod) * wpi->threshold + (storeCounter[0] - wpi->storeCounter);
+        diffCounter = loadCounter[0] + storeCounter[0];
+    }
+    if (wpi->eventID == 1) {
+        storePeriod++;
+        std::cout << "reuse: eventID: " << wpi->eventID << std::endl;
+        std::cout << "reuse: load period: " << loadPeriod << std::endl;
+        std::cout << "reuse: store period: " << storePeriod << std::endl;
+        std::cout << "reuse: loadCounter value: " << loadCounter[0] << " time enabling: " << loadCounter[1] << " time running: " << loadCounter[2] << std::endl;
+        std::cout << "reuse: storeCounter value: " << storeCounter[0] << " time enabling: " << storeCounter[1] << " time running: " << storeCounter[2] << std::endl;
+        
+        storeCounter[0] = (storePeriod - wpi->storePeriod - 1) * wpi->threshold + storeCounter[0];
+        loadCounter[0] = (loadPeriod - wpi->loadPeriod) * wpi->threshold + (loadCounter[0] - wpi->loadCounter);
+        diffCounter = loadCounter[0] + storeCounter[0];
+    }
 
-    Context *watch_context =(Context *)(wpi->watchCtxt);
-    Context *trigger_context = constructContext(_asgct, wpi->uCtxt, (uint64_t)wpi->pc, watch_context, method_id, method_version, 10);
+    std::cout << "reuse: diff counter: " << diffCounter << std::endl;
 
-    if (trigger_context != nullptr) {
-		metrics::ContextMetrics *metrics = trigger_context->getMetrics();
-		if (metrics == nullptr) {
-			metrics = new metrics::ContextMetrics();
-			trigger_context->setMetrics(metrics);
-		}
-		metrics::metric_val_t metric_val;
-		metric_val.i = diff_count;
-		assert(metrics->increment(wpi->metric_id1, metric_val));
-	}
+    if (diffCounter > 0) {
+        lock_rdx_map.lock();
+        rdx_map[diffCounter]++;
+        lock_rdx_map.unlock();
+
+        jmethodID method_id = 0;
+        uint32_t method_version = 0;
+
+        Context *watch_context =(Context *)(wpi->watchCtxt);
+        Context *trigger_context = constructContext(_asgct, wpi->uCtxt, (uint64_t)wpi->pc, watch_context, method_id, method_version, 10);
+
+        if (trigger_context != nullptr) {
+		    metrics::ContextMetrics *metrics = trigger_context->getMetrics();
+		    if (metrics == nullptr) {
+			    metrics = new metrics::ContextMetrics();
+			    trigger_context->setMetrics(metrics);
+		    }
+		    metrics::metric_val_t metric_val;
+		    metric_val.i = diffCounter;
+		    assert(metrics->increment(wpi->metric_id1, metric_val));
+	    }
+    }
 
     profiler_safe_exit();
     return WP_DISABLE;
@@ -998,6 +1045,6 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotAllocTimes << std::endl;
     } else if (clientName.compare(REUSE_DISTANCE) == 0) {
         _statistics_file << clientName << std::endl;
-        _statistics_file << totalMemCounter << std::endl;
+        // _statistics_file << totalMemCounter << std::endl;
     }
 }

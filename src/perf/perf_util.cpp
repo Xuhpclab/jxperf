@@ -43,10 +43,12 @@ bool perf_attr_init(struct perf_event_attr *attr, uint64_t threshold, uint64_t m
     attr->freq   = 0;
     attr->sample_period = threshold;
     if (threshold == 0){
+        attr->freq   = 1;
         attr->read_format = PERF_FORMAT_TOTAL_TIME_ENABLED|PERF_FORMAT_TOTAL_TIME_RUNNING;
     }
     else {
-        attr->read_format = 0;
+       // attr->read_format = 0;
+       attr->read_format = PERF_FORMAT_TOTAL_TIME_ENABLED|PERF_FORMAT_TOTAL_TIME_RUNNING;
     }
     attr->disabled = 1; /* the counter will be enabled later  */
     attr->wakeup_events = 1; /* overflow notifications happen after wakeup_events samples */ 
@@ -67,11 +69,13 @@ bool perf_attr_init(struct perf_event_attr *attr, uint64_t threshold, uint64_t m
 bool perf_read_event_counter(int fd, uint64_t *val){
     if (fd < 0){
         ERROR("Unable to open the event %d file descriptor", fd);
+        std::cout << "unable open" << std::endl;
         return false;
     }
     int ret = read(fd, val, sizeof(uint64_t) * 3 );
     if (ret < sizeof(uint64_t)*3) {
         ERROR("Unable to read the event %d file descriptor", fd);
+        std::cout << "unable read" << std::endl;
         return false;
     }
     return true;
