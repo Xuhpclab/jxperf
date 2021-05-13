@@ -55,7 +55,7 @@ uint64_t grandTotDiffNUMA = 0;
 uint64_t grandTotL1Cachemiss = 0;
 uint64_t grandTotGenericCounter = 0;
 uint64_t grandTotMemoryAccessCounter = 0;
-uint64_t totalMemCounter = 0;
+uint64_t totalPMUCounter = 0;
 
 thread_local uint64_t totalWrittenBytes = 0;
 thread_local uint64_t totalLoadedBytes = 0;
@@ -241,12 +241,15 @@ void Profiler::ReuseDistanceAnalysis(int eventID, perf_sample_data_t *sampleData
     uint64_t storeCounter[3];
     assert(PerfManager::readCounter(0, loadCounter));
     assert(PerfManager::readCounter(1, storeCounter));
+    totalPMUCounter = loadCounter[0] + storeCounter[0];
 
+#if 1
     std::cout << "use: eventID: " << eventID << std::endl;
     std::cout << "use: load period: " << loadPeriod << std::endl;
     std::cout << "use: store period: " << storePeriod << std::endl;
     std::cout << "use: loadCounter value: " << loadCounter[0] << " time enabling: " << loadCounter[1] << " time running: " << loadCounter[2] << std::endl;
     std::cout << "use: storeCounter value: " << storeCounter[0] << " time enabling: " << storeCounter[1] << " time running: " << storeCounter[2] << std::endl;
+#endif
 
     void *sampleAddr = (void *)(sampleData->addr);
     void *sampleIP = (void *)(sampleData->ip);
@@ -276,30 +279,36 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
 
     if (wpi->eventID == 0) {
         loadPeriod++;
+#if 1
         std::cout << "reuse: eventID: " << wpi->eventID << std::endl;
         std::cout << "reuse: load period: " << loadPeriod << std::endl;
         std::cout << "reuse: store period: " << storePeriod << std::endl;
         std::cout << "reuse: loadCounter value: " << loadCounter[0] << " time enabling: " << loadCounter[1] << " time running: " << loadCounter[2] << std::endl;
         std::cout << "reuse: storeCounter value: " << storeCounter[0] << " time enabling: " << storeCounter[1] << " time running: " << storeCounter[2] << std::endl;
-        
+#endif
+
         loadCounter[0] = (loadPeriod - wpi->loadPeriod - 1) * wpi->threshold + loadCounter[0];
         storeCounter[0] = (storePeriod - wpi->storePeriod) * wpi->threshold + (storeCounter[0] - wpi->storeCounter);
         diffCounter = loadCounter[0] + storeCounter[0];
     }
     if (wpi->eventID == 1) {
         storePeriod++;
+#if 1
         std::cout << "reuse: eventID: " << wpi->eventID << std::endl;
         std::cout << "reuse: load period: " << loadPeriod << std::endl;
         std::cout << "reuse: store period: " << storePeriod << std::endl;
         std::cout << "reuse: loadCounter value: " << loadCounter[0] << " time enabling: " << loadCounter[1] << " time running: " << loadCounter[2] << std::endl;
         std::cout << "reuse: storeCounter value: " << storeCounter[0] << " time enabling: " << storeCounter[1] << " time running: " << storeCounter[2] << std::endl;
-        
+#endif
+
         storeCounter[0] = (storePeriod - wpi->storePeriod - 1) * wpi->threshold + storeCounter[0];
         loadCounter[0] = (loadPeriod - wpi->loadPeriod) * wpi->threshold + (loadCounter[0] - wpi->loadCounter);
         diffCounter = loadCounter[0] + storeCounter[0];
     }
 
+#if 1
     std::cout << "reuse: diff counter: " << diffCounter << std::endl;
+#endif
 
     if (diffCounter > 0) {
         lock_rdx_map.lock();
@@ -1045,6 +1054,6 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotAllocTimes << std::endl;
     } else if (clientName.compare(REUSE_DISTANCE) == 0) {
         _statistics_file << clientName << std::endl;
-        // _statistics_file << totalMemCounter << std::endl;
+        _statistics_file << totalPMUCounter << std::endl;
     }
 }
