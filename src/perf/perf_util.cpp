@@ -69,13 +69,11 @@ bool perf_attr_init(struct perf_event_attr *attr, uint64_t threshold, uint64_t m
 bool perf_read_event_counter(int fd, uint64_t *val){
     if (fd < 0){
         ERROR("Unable to open the event %d file descriptor", fd);
-        std::cout << "unable open" << std::endl;
         return false;
     }
     int ret = read(fd, val, sizeof(uint64_t) * 3 );
     if (ret < sizeof(uint64_t)*3) {
         ERROR("Unable to read the event %d file descriptor", fd);
-        std::cout << "unable read" << std::endl;
         return false;
     }
     return true;
