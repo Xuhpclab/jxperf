@@ -243,7 +243,7 @@ void Profiler::ReuseDistanceAnalysis(int eventID, perf_sample_data_t *sampleData
     assert(PerfManager::readCounter(1, storeCounter));
     totalPMUCounter = loadCounter[0] + storeCounter[0];
 
-#if 1
+#if 0
     std::cout << "use: eventID: " << eventID << std::endl;
     std::cout << "use: load period: " << loadPeriod << std::endl;
     std::cout << "use: store period: " << storePeriod << std::endl;
@@ -279,7 +279,7 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
 
     if (wpi->eventID == 0) {
         loadPeriod++;
-#if 1
+#if 0
         std::cout << "reuse: eventID: " << wpi->eventID << std::endl;
         std::cout << "reuse: load period: " << loadPeriod << std::endl;
         std::cout << "reuse: store period: " << storePeriod << std::endl;
@@ -293,7 +293,7 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
     }
     if (wpi->eventID == 1) {
         storePeriod++;
-#if 1
+#if 0
         std::cout << "reuse: eventID: " << wpi->eventID << std::endl;
         std::cout << "reuse: load period: " << loadPeriod << std::endl;
         std::cout << "reuse: store period: " << storePeriod << std::endl;
@@ -306,7 +306,7 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
         diffCounter = loadCounter[0] + storeCounter[0];
     }
 
-#if 1
+#if 0
     std::cout << "reuse: diff counter: " << diffCounter << std::endl;
 #endif
 

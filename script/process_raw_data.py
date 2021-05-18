@@ -384,7 +384,7 @@ def main():
         rows = sorted(list(dump_data.items()), key=lambda x: x[-1], reverse = True)
 
         for row in rows:
-            if row[0] != "" and row[0][-1] != "*":
+            if row[0] != "" and row[0][-1] != "*" and row[-1] > 0:
                 file.write(row[0] + "\n\nReuse Distance: " + str(row[-1]) +"\n")
         file.write("\nTotal Memory Access Times: " + result[0])
 
