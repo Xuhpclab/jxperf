@@ -74,10 +74,7 @@ def main():
 	global num_accesses
 	global num_elements
     
-	# subprocess.run(["python2", "./rdx-script/mem_overhead.py", "java", "-jar", "./benchmark/dacapo.jar", "-s", "large", "lusearch"])
-	# subprocess.run(["python2", "./mem_overhead.py", "java", "-jar", "/home/bli11/data/SPECjvm2008/build/release/SPECjvm2008/SPECjvm2008.jar", "-wt", "0", "-ops", "10", "-i", "1", "-bt", "4", "-ict", "scimark.fft.large"])
-	subprocess.run(["python2", "./mem_overhead.py", "java", "JGFMolDynBenchSizeB"])
-	file_memory_usage = open("peak_memory.run", "r")
+	file_memory_usage = open("maxMem.run", "r")
 	result_memory_usage = file_memory_usage.read().splitlines()
 	file_memory_usage.close()
 	num_elements = int(result_memory_usage[-1]) * 1024 // 16

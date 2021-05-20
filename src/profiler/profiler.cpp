@@ -55,7 +55,7 @@ uint64_t grandTotDiffNUMA = 0;
 uint64_t grandTotL1Cachemiss = 0;
 uint64_t grandTotGenericCounter = 0;
 uint64_t grandTotMemoryAccessCounter = 0;
-uint64_t totalPMUCounter = 0;
+uint64_t grandTotPMUCounter = 0;
 
 thread_local uint64_t totalWrittenBytes = 0;
 thread_local uint64_t totalLoadedBytes = 0;
@@ -69,6 +69,7 @@ thread_local uint64_t totalSameNUMA = 0;
 thread_local uint64_t totalDiffNUMA = 0;
 thread_local uint64_t totalL1Cachemiss = 0;
 thread_local uint64_t totalGenericCounter = 0;
+thread_local uint64_t totalPMUCounter = 0;
 
 thread_local uint64_t loadPeriod = 0;
 thread_local uint64_t storePeriod = 0;
@@ -108,7 +109,7 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
     // It's sort of tricky. Use bci to split a context pair.
     if (ctxt == nullptr && last_ctxt != nullptr) ctxt_frame.bci = -65536;
     if (last_ctxt != nullptr) last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame);
-    else last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
+    // else last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
     
     return last_ctxt;
 }
@@ -870,6 +871,7 @@ void Profiler::threadStart() {
     totalDiffNUMA = 0;
     totalL1Cachemiss = 0;
     totalGenericCounter = 0;
+    totalPMUCounter = 0;
 
     ThreadData::thread_data_alloc();
     ContextTree *ct_tree = new(std::nothrow) ContextTree();
@@ -992,6 +994,7 @@ void Profiler::threadEnd() {
         __sync_fetch_and_add(&grandTotDiffNUMA, totalDiffNUMA);
         __sync_fetch_and_add(&grandTotL1Cachemiss, totalL1Cachemiss); 
         __sync_fetch_and_add(&grandTotGenericCounter, totalGenericCounter);
+        __sync_fetch_and_add(&grandTotPMUCounter, totalPMUCounter);
     } else {    //attach mode
         output_lock.lock();
         grandTotWrittenBytes += totalWrittenBytes;
@@ -1006,6 +1009,7 @@ void Profiler::threadEnd() {
         grandTotDiffNUMA += totalDiffNUMA;
         grandTotL1Cachemiss += totalL1Cachemiss;
         grandTotGenericCounter += totalGenericCounter;
+        grandTotPMUCounter += totalPMUCounter;
         _statistics_file.seekp(0,std::ios::beg);
         output_statistics();
         output_lock.unlock();
@@ -1054,6 +1058,6 @@ void Profiler::output_statistics() {
         _statistics_file << grandTotAllocTimes << std::endl;
     } else if (clientName.compare(REUSE_DISTANCE) == 0) {
         _statistics_file << clientName << std::endl;
-        _statistics_file << totalPMUCounter << std::endl;
+        _statistics_file << grandTotPMUCounter << std::endl;
     }
 }
