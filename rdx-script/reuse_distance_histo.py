@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 from pylib import *
 import subprocess
 ## tunable parameters
@@ -11,6 +12,15 @@ g_stack_distance_range_plan = None
 
 num_accesses = 0
 num_elements = 0
+
+def remove_all_files(directory):
+    files = [f for f in os.listdir(directory) if os.path.isfile(
+        os.path.join(directory, f))]
+    for f in files:
+        if f.startswith("agent-trace-") and f.find(".run") >= 0:
+            os.remove(f)
+        elif f.startswith("agent-statistics") and f.find(".run"):
+            os.remove(f)
 
 
 def draw_histo(markers:list, counts:list)->None:
@@ -77,7 +87,7 @@ def main():
 	file_memory_usage = open("maxMem.run", "r")
 	result_memory_usage = file_memory_usage.read().splitlines()
 	file_memory_usage.close()
-	num_elements = int(result_memory_usage[-1]) * 1024 // 16
+	num_elements = int(result_memory_usage[-1]) * 1024 // 4
 	print(num_elements)
 
 	file = open("agent-statistics.run", "r")
@@ -106,5 +116,9 @@ def main():
 	g_stack_distance_range_plan = args.srh_plan
 
 	process_input(args.input_file, output)
+
+	print("Final dumping")
+
+	remove_all_files(".")
 
 main()
