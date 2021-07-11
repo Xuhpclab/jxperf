@@ -1,4 +1,5 @@
 #include "allocation_ins.h"
+#include "com_google_monitoring_runtime_instrumentation_TimeHolder.h"
 
 typedef struct {
     const void *src;
@@ -60,9 +61,16 @@ namespace {
 }
 }
 
+JNIEXPORT void JNICALL 
+Java_com_google_monitoring_runtime_instrumentation_TimeHolder_clearTree2(JNIEnv *, jobject) {
+    std::cout << "ClearTree222" << std::endl;
+}
+
 JNIEXPORT void JNICALL
 Java_com_google_monitoring_runtime_instrumentation_AllocationInstrumenter_clearTree(JNIEnv *env, jobject obj) {
     profiler_safe_enter();
+
+    std::cout << "get into dataCentric" << std::endl;
 
     void* startaddress;
     interval_tree_node *del_tree;
@@ -112,6 +120,8 @@ JNIEXPORT void JNICALL Java_com_google_monitoring_runtime_instrumentation_Alloca
 JNIEXPORT void JNICALL
 Java_com_google_monitoring_runtime_instrumentation_AllocationInstrumenter_dataCentric(JNIEnv *env, jobject obj, jstring addr, jlong size) { 
     profiler_safe_enter();
+
+    std::cout << "get into dataCentric" << std::endl;
     
     const char *tmp = env->GetStringUTFChars(addr, 0);
     char *pend;
