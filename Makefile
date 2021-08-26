@@ -8,6 +8,7 @@ thirdparty:
 	cd thirdparty/xed && ./mfile.py --debug --shared --prefix=$(CURRENT_DIR)/build/thirdparty install
 	cd thirdparty/libpfm-4.10.1 &&  make PREFIX=$(CURRENT_DIR)/build/thirdparty install
 	cd thirdparty/boost && sh ./bootstrap.sh --prefix=$(CURRENT_DIR)/build/thirdparty --with-libraries="filesystem"  cxxflags="-std=c++11" && ./b2 -j 4 && ./b2 filesystem install 
+	cd thirdparty/dl4j-layer-callback && mvn package
 	cd thirdparty/allocation-instrumenter && mvn package -DskipTests
 	mkdir $(CURRENT_DIR)/build/preload
 	cd preload && make
