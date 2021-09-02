@@ -18,6 +18,9 @@ class Interpreter:
 		
 		ip = context.binary_addr
 		node = context.numa_node
+		layerName = context.layerName
+		direction = context.direction
+		layerIndex = context.layerIndex
 		if self._context_manager.isRoot(context):
 			class_name, method_name, source_file, source_lineno, method_start_line, ip = "Root", None, None, None, None, None
 
@@ -86,6 +89,9 @@ class Interpreter:
 		
 		ip = context.binary_addr
 		node = context.numa_node
+		layerName = context.layerName
+		direction = context.direction
+		layerIndex = context.layerIndex
 		if self._context_manager.isRoot(context):
 			class_name, method_name, source_file, source_lineno, ip = "Root", None, None, None, None
 
@@ -141,4 +147,9 @@ class Interpreter:
 		# elif ip != "":
 			# return ""
 		else:
-			return class_name + "." + method_name +"(" + source_file +":" + source_lineno + " " + node + ")"
+			if layerName != "":
+    				return class_name + "." + method_name +"(" + source_file +":" + source_lineno + ")" + "\n" + "[" + layerName + " " + direction + " " + layerIndex + "]"
+			elif node != "":
+    				return class_name + "." + method_name +"(" + source_file +":" + source_lineno + " " + node + ")"
+			else:
+					return class_name + "." + method_name +"(" + source_file +":" + source_lineno + ")"

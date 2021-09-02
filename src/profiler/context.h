@@ -27,6 +27,10 @@ public:
    std::string source_file;
    int32_t bci = -1; // bci is not available. We shouldn't initialize bci to 0.
    int32_t src_lineno = 0;
+
+   const char* layerName = "";
+   const char* direction = "";
+   uint32_t layerIndex = -1;
 };
 
 
@@ -60,6 +64,9 @@ private:
       a->_frame.method_id == b->_frame.method_id &&
       a->_frame.binary_addr == b->_frame.binary_addr &&
       a->_frame.numa_node == b->_frame.numa_node &&
+      a->_frame.layerName == b->_frame.layerName &&
+      a->_frame.direction == b->_frame.direction &&
+      a->_frame.layerIndex == b->_frame.layerIndex &&
       a->_frame.method_version == b->_frame.method_version;
   }
 

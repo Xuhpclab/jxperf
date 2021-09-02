@@ -14,6 +14,13 @@
 #include "splay.h"
 #include "lock.h"
 
+typedef struct layerStruct {
+  const char* name;
+  const char* direction;
+  uint32_t index;
+  layerStruct() : name(""), direction(""), index(-1) {} 
+} layer_info_t;
+
 class Profiler {
 public:
 

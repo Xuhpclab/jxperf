@@ -66,6 +66,9 @@ XMLObj *createXMLObj(Context *instance) {
   SET_ATTR(obj, "method_version", instance->_frame.method_version);
   SET_ATTR(obj, "binary_addr", instance->_frame.binary_addr);
   SET_ATTR(obj, "numa_node", instance->_frame.numa_node);
+  SET_ATTR(obj, "layerName", instance->_frame.layerName);
+  SET_ATTR(obj, "direction", instance->_frame.direction);
+  SET_ATTR(obj, "layerIndex", instance->_frame.layerIndex);
   SET_ATTR(obj, "bci", instance->_frame.bci);
   if (instance->_parent){
     SET_ATTR(obj, "parent_id", instance->_parent->_id);

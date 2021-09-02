@@ -39,6 +39,9 @@ extern bool jni_flag;
 extern bool onload_flag;
 static SpinLock output_lock;
 
+SpinLock layer_lock;
+layer_info_t layerInfo{};
+
 uint64_t GCCounter = 0;
 thread_local uint64_t localGCCounter = 0;
 
@@ -74,12 +77,11 @@ thread_local uint64_t totalPMUCounter = 0;
 thread_local uint64_t loadPeriod = 0;
 thread_local uint64_t storePeriod = 0;
 
-
 thread_local void *prevIP = (void *)0;
 
 namespace {
 
-Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctxt, jmethodID method_id, uint32_t method_version, int object_numa_node) {
+Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctxt, jmethodID method_id, uint32_t method_version, int object_numa_node, const char* layerName, const char* direction, uint32_t layerIndex) {
     ContextTree *ctxt_tree = reinterpret_cast<ContextTree *> (TD_GET(context_state));
     Context *last_ctxt = ctxt;
 
@@ -95,6 +97,11 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
         if (i == 0) {
             //ctxt_frame.binary_addr = ip;
             ctxt_frame.numa_node = object_numa_node;
+            //if (layerIndex != -1) {
+                ctxt_frame.layerName = layerName;
+                ctxt_frame.direction = direction;
+                ctxt_frame.layerIndex = layerIndex;
+            //}
         }
         ctxt_frame = frames[i]; //set method_id and bci
         if (last_ctxt == nullptr) last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
@@ -166,7 +173,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
     if (accessType == UNKNOWN || accessLen == 0) return;
     int watchLen = GetFloorWPLength(accessLen);
 
-    Context *watchCtxt = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
+    Context *watchCtxt = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10, "", "", -1);
     if (watchCtxt == nullptr) return;
     UpdateNumSamples(watchCtxt, metric_id1); 
 
@@ -217,17 +224,22 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 }
 
 void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
-    Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
-    if (ctxt_access != nullptr && sampleData->ip != 0) {
-		metrics::ContextMetrics *metrics = ctxt_access->getMetrics();
-		if (metrics == nullptr) {
-			metrics = new metrics::ContextMetrics();
-			ctxt_access->setMetrics(metrics);
-		}
-		metrics::metric_val_t metric_val;
-		metric_val.i = threshold;
-		assert(metrics->increment(metric_id2, metric_val));
-        totalGenericCounter += threshold;
+    if (layerInfo.index != -1) {
+        Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10, layerInfo.name, layerInfo.direction, layerInfo.index);
+        if (ctxt_access != nullptr && sampleData->ip != 0) {
+		    metrics::ContextMetrics *metrics = ctxt_access->getMetrics();
+		    if (metrics == nullptr) {
+			    metrics = new metrics::ContextMetrics();
+			    ctxt_access->setMetrics(metrics);
+		    }
+		    metrics::metric_val_t metric_val;
+		    metric_val.i = threshold;
+		    assert(metrics->increment(metric_id2, metric_val));
+            totalGenericCounter += threshold;
+
+            if(layerInfo.index != -1)
+                std::cout << "<Profiler profiler.cpp> layer name: " << layerInfo.name << " layer direction: " << layerInfo.direction << " index: " << layerInfo.index << std::endl;
+        }
     }
 }
 
@@ -261,7 +273,7 @@ void Profiler::ReuseDistanceAnalysis(int eventID, perf_sample_data_t *sampleData
     if (accessType == UNKNOWN || accessLen == 0) return;
     int watchLen = GetFloorWPLength(accessLen);
 
-    Context *watch_context = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
+    Context *watch_context = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10, "", "", -1);
     if (watch_context == nullptr) return;
     UpdateNumSamples(watch_context, metric_id1);
 
@@ -320,7 +332,7 @@ WP_TriggerAction_t Profiler::OnReuseDistanceWatchPoint(WP_TriggerInfo_t *wpi) {
         uint32_t method_version = 0;
 
         Context *watch_context =(Context *)(wpi->watchCtxt);
-        Context *trigger_context = constructContext(_asgct, wpi->uCtxt, (uint64_t)wpi->pc, watch_context, method_id, method_version, 10);
+        Context *trigger_context = constructContext(_asgct, wpi->uCtxt, (uint64_t)wpi->pc, watch_context, method_id, method_version, 10, "", "", -1);
 
         if (trigger_context != nullptr) {
 		    metrics::ContextMetrics *metrics = trigger_context->getMetrics();
@@ -364,8 +376,8 @@ void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, 
 			ctxt_stack.pop();
 		}
 			
-		Context *ctxt_allocate = constructContext(_asgct, uCtxt, sampleData->ip, ctxt, method_id, method_version, 10);
-		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
+		Context *ctxt_allocate = constructContext(_asgct, uCtxt, sampleData->ip, ctxt, method_id, method_version, 10, "", "", -1);
+		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10, "", "", -1);
 			
 		lock_map.lock();
 		map[ctxt_access] = ctxt_allocate;
@@ -382,7 +394,7 @@ void Profiler::DataCentricAnalysis(perf_sample_data_t *sampleData, void *uCtxt, 
 			totalL1Cachemiss += threshold;
 		}
 	} else {
-		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10);
+		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10, "", "", -1);
 		lock_map.lock();
 		std::unordered_map<Context*, Context*>::iterator it = map.find(ctxt_access);
 		lock_map.unlock();
@@ -449,8 +461,8 @@ void::Profiler::NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmetho
 			ctxt_stack.pop();
 		}
 
-		Context *ctxt_allocate = constructContext(_asgct, uCtxt, sampleData->ip, ctxt, method_id, method_version, object_numa_node);
-		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node);
+		Context *ctxt_allocate = constructContext(_asgct, uCtxt, sampleData->ip, ctxt, method_id, method_version, object_numa_node, "", "", -1);
+		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node, "", "", -1);
 
 		lock_map.lock();
 		map[ctxt_access] = ctxt_allocate;
@@ -473,7 +485,7 @@ void::Profiler::NumaAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmetho
             }
 		}
 	} else {
-		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node);
+		Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, object_numa_node, "", "", -1);
 		lock_map.lock();
 		std::unordered_map<Context*, Context*>::iterator it = map.find(ctxt_access);
 		lock_map.unlock();
@@ -576,7 +588,7 @@ WP_TriggerAction_t Profiler::OnDeadStoreWatchPoint(WP_TriggerInfo_t *wpt) {
         totalUsedBytes += inc;
     } else {
         totalDeadBytes += inc;
-        Context *triggerCtxt = constructContext(_asgct, wpt->uCtxt, (uint64_t)wpt->pc, watchCtxt, method_id, method_version, 10);
+        Context *triggerCtxt = constructContext(_asgct, wpt->uCtxt, (uint64_t)wpt->pc, watchCtxt, method_id, method_version, 10, "", "", -1);
         
         assert(triggerCtxt != nullptr);
         /* if (triggerCtxt == nullptr) {
@@ -689,7 +701,7 @@ WP_TriggerAction_t Profiler::DetectRedundancy(WP_TriggerInfo_t *wpt, jmethodID m
         }
         if (redBytes != 0) {
             totalOldAppxBytes += inc;
-            Context *triggerCtxt = constructContext(_asgct, wpt->uCtxt, (uint64_t)wpt->pc, watchCtxt, method_id, method_version, 10);
+            Context *triggerCtxt = constructContext(_asgct, wpt->uCtxt, (uint64_t)wpt->pc, watchCtxt, method_id, method_version, 10, "", "", -1);
             assert(triggerCtxt != nullptr);
             // if (triggerCtxt == nullptr) return WP_DISABLE;
             metrics::ContextMetrics *metrics = triggerCtxt->getMetrics();
@@ -715,7 +727,7 @@ WP_TriggerAction_t Profiler::DetectRedundancy(WP_TriggerInfo_t *wpt, jmethodID m
         }        
         if (redBytes != 0) {
             totalOldBytes += inc;
-            Context *triggerCtxt = constructContext(_asgct, wpt->uCtxt, (uint64_t)wpt->pc, watchCtxt, method_id, method_version, 10);
+            Context *triggerCtxt = constructContext(_asgct, wpt->uCtxt, (uint64_t)wpt->pc, watchCtxt, method_id, method_version, 10, "", "", -1);
             assert(triggerCtxt != nullptr);
             // if (triggerCtxt == nullptr) return WP_DISABLE;
             metrics::ContextMetrics *metrics = triggerCtxt->getMetrics();

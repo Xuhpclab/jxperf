@@ -13,7 +13,7 @@ extern "C" {
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_instrumenter_LayerCallback_callbackLayerInfo
-  (JNIEnv *, jobject);
+  (JNIEnv *, jobject, jstring, jint, jstring);
 
 #ifdef __cplusplus
 }

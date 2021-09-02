@@ -14,6 +14,10 @@ extern __thread uint64_t totalAllocTimes;
 extern SpinLock relocation_map_lock;
 extern std::unordered_map<void*, relocation_info_t> relocation_map;
 
+extern SpinLock layer_lock;
+extern layer_info_t layerInfo;
+// extern std::unordered_map<const char*, layer_info_t> dl4j_layer;
+
 namespace {
 	Context *allocation_constructContext(ASGCT_FN asgct, void *context, std::string client_name){
     ASGCT_CallTrace trace;
@@ -62,8 +66,19 @@ namespace {
 }
 
 JNIEXPORT void JNICALL 
-Java_instrumenter_LayerCallback_callbackLayerInfo(JNIEnv *, jobject) {
-    std::cout << "callbackLayerInfo invoked" << std::endl;
+Java_instrumenter_LayerCallback_callbackLayerInfo(JNIEnv *env, jobject obj, jstring layerName, jint index, jstring direction) {
+    const char *name = env->GetStringUTFChars(layerName, 0);
+    const char *dir = env->GetStringUTFChars(direction, 0);
+    uint32_t layerIndex = index;
+
+    layer_lock.lock();
+    
+    layerInfo.name = name;
+    layerInfo.direction = dir;
+    layerInfo.index = layerIndex;
+    // std::cout << "<Profiler allocation_ins.cpp1> layer name: " << layerInfo.name << " layer direction: " << layerInfo.direction << " index: " << layerInfo.index << std::endl;
+
+    layer_lock.unlock();
 }
 
 JNIEXPORT void JNICALL
