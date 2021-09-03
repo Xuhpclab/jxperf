@@ -237,8 +237,8 @@ void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmet
 		    assert(metrics->increment(metric_id2, metric_val));
             totalGenericCounter += threshold;
 
-            if(layerInfo.index != -1)
-                std::cout << "<Profiler profiler.cpp> layer name: " << layerInfo.name << " layer direction: " << layerInfo.direction << " index: " << layerInfo.index << std::endl;
+            // if(layerInfo.index != -1)
+            //     std::cout << "<Profiler profiler.cpp> layer name: " << layerInfo.name << " layer direction: " << layerInfo.direction << " index: " << layerInfo.index << std::endl;
         }
     }
 }
