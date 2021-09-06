@@ -125,6 +125,9 @@ def load_context(context_root):
         ctxt.method_version = ctxt_xml.get("method_version")
         ctxt.binary_addr = ctxt_xml.get("binary_addr")
         ctxt.numa_node = ctxt_xml.get("numa_node")
+        ctxt.layerName = ctxt_xml.get("layerName")
+        ctxt.direction = ctxt_xml.get("direction")
+        ctxt.layerIndex = ctxt_xml.get("layerIndex")
         ctxt.method_id = ctxt_xml.get("method_id")
         ctxt.bci = ctxt_xml.get("bci")
         ctxt.setParentID(ctxt_xml.get("parent_id"))
@@ -410,7 +413,12 @@ def output_to_vscode(tid, method_manager, context_manager, ctxt_map, tree_node_m
                         thread_tree_root = tree_node_map[ctxt_hndl_str]
                     elif key.ctype == 1:
                         if key.source_lineno == "??":
-                            key.source_lineno = "0"
+                            if key.layer_name == "":
+                                key.source_lineno = "0"
+                            else:
+                                key.class_name = key.layer_name
+                                key.method_name = key.layer_direction
+                                key.source_lineno = key.layer_index
                         line_no = int(key.source_lineno)
                         file_path = get_file_path(key.source_file, key.class_name)
                         ctxt_map[ctxt_hndl_str] = {
@@ -529,7 +537,7 @@ def main():
     ctxt_map = {
         "process-root": {
             "pc": " ",
-            "name": "ROOT",
+            "name": "ROOT1",
             "file_path": " ",
             "asm": " ",
             "line_no": 0,
@@ -539,7 +547,7 @@ def main():
     tree_node_map = {
         "process-root": {
             "ctxt_hndl": "process-root",
-            "n": "ROOT",
+            "n": "ROOT1",
             "v": 0,
             "c": []
         }
@@ -557,7 +565,7 @@ def main():
             merge_tree_node(tree_root, thread_tree_root, ctxt_map, tree_node_map)
 
     print(cout_tree_node(tree_root))
-    get_simple_tree(tree_root, tree_root['v']/1000)
+    # get_simple_tree(tree_root, tree_root['v']/1000)
     print(cout_tree_node(tree_root))
 
     drdata_folder = output_root + "/.drcctprof";

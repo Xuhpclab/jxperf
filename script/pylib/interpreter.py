@@ -2,8 +2,8 @@ from . import code_cache
 from . import context
 
 class Interpreter_Context:
-	def __init__(self, ctype, class_name, method_name, source_file, source_lineno, method_start_line):
-		self.ctype, self.class_name, self.method_name, self.source_file, self.source_lineno, self.method_start_line= ctype, class_name, method_name, source_file, source_lineno, method_start_line
+	def __init__(self, ctype, class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index):
+		self.ctype, self.class_name, self.method_name, self.source_file, self.source_lineno, self.method_start_line, self.layer_name, self.layer_direction, self.layer_index= ctype, class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index
 
 class Interpreter:
 	def __init__(self, method_manager, context_manager):
@@ -22,31 +22,33 @@ class Interpreter:
 		direction = context.direction
 		layerIndex = context.layerIndex
 		if self._context_manager.isRoot(context):
-			class_name, method_name, source_file, source_lineno, method_start_line, ip = "Root", None, None, None, None, None
+			class_name, method_name, source_file, source_lineno, method_start_line, ip, layer_name, layer_direction, layer_index = "Root", None, None, None, None, None, layerName, direction, layerIndex
 
 		elif ip != "0": ## leaf node
 			method = self._method_manager.getMethod(context.method_id, context.method_version)
 			if method:
 				class_name = method.class_name
-				method_name = method.method_name				
+				method_name = method.method_name	
+				layerName = context.layerName			
 				source_file = method.file
 				source_lineno = method.addr2line(context.binary_addr)
 				method_start_line = method.start_line
 			else:
-				class_name, method_name, source_file, source_lineno, method_start_line= None, None, None, None, None
+				class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index= None, None, None, None, None, layerName, direction, layerIndex
 
 
 		else: ## middle node
 			method = self._method_manager.getMethod(context.method_id, context.method_version)
 			if method:
 				method_name = method.method_name
+				layerName = context.layerName
 				class_name = method.class_name
 				source_file = method.file
 				source_lineno = method.bci2line(context.bci)
 				method_start_line = method.start_line
 				ip = None
 			else:
-				class_name, method_name, source_file, source_lineno, method_start_line= None, None, None, None, None
+				class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index= None, None, None, None, None, layerName, direction, layerIndex
 
 		if class_name == None or len(class_name) == 0:
 			class_name = "??"
@@ -70,17 +72,17 @@ class Interpreter:
 
 
 		if context.bci == "-65535":
-			return Interpreter_Context(-1, None, None, None, None, None)
+			return Interpreter_Context(-1, None, None, None, None, None, None, None, None)
 		# elif context.bci == "-65536" and isNuma:
 		# 	return "***********************Access to the object above***********************"
 		elif context.bci == "-65536":
-			return Interpreter_Context(-2, None, None, None, None, None)
+			return Interpreter_Context(-2, None, None, None, None, None, None, None, None)
 		elif class_name == "Root":
-			return Interpreter_Context(0, None, None, None, None, None)
+			return Interpreter_Context(0, None, None, None, None, None, None, None, None)
 		# elif ip != "":
 			# return ""
 		else:
-			return Interpreter_Context(1, class_name, method_name, source_file, source_lineno, method_start_line)
+			return Interpreter_Context(1, class_name, method_name, source_file, source_lineno, method_start_line, layerName, direction, layerIndex)
 
 
 	def getSrcPosition(self, context):
@@ -148,7 +150,8 @@ class Interpreter:
 			# return ""
 		else:
 			if layerName != "":
-    				return class_name + "." + method_name +"(" + source_file +":" + source_lineno + ")" + "\n" + "[" + layerName + " " + direction + " " + layerIndex + "]"
+					return layerName + "." + direction + "." + layerIndex +"(" + source_file +":" + source_lineno + ")"
+    				# return class_name + "." + method_name +"(" + source_file +":" + source_lineno + ")" + "\n" + "[" + layerName + " " + direction + " " + layerIndex + "]"
 			elif node != "":
     				return class_name + "." + method_name +"(" + source_file +":" + source_lineno + " " + node + ")"
 			else:

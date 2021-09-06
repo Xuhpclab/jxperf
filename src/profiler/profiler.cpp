@@ -83,6 +83,13 @@ namespace {
 
 Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctxt, jmethodID method_id, uint32_t method_version, int object_numa_node, const char* layerName, const char* direction, uint32_t layerIndex) {
     ContextTree *ctxt_tree = reinterpret_cast<ContextTree *> (TD_GET(context_state));
+
+    ContextFrame ctxt_frame_layer;
+    ctxt_frame_layer.layerName = layerName;
+    ctxt_frame_layer.direction = direction;
+    ctxt_frame_layer.layerIndex = layerIndex;
+    ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame_layer);
+
     Context *last_ctxt = ctxt;
 
     ASGCT_CallFrame frames[MAX_FRAME_NUM];
@@ -95,13 +102,11 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
         // TODO: We need to consider how to include the native method.
         ContextFrame ctxt_frame;
         if (i == 0) {
-            //ctxt_frame.binary_addr = ip;
+            // ctxt_frame.binary_addr = ip;
             ctxt_frame.numa_node = object_numa_node;
-            //if (layerIndex != -1) {
-                ctxt_frame.layerName = layerName;
-                ctxt_frame.direction = direction;
-                ctxt_frame.layerIndex = layerIndex;
-            //}
+            // ctxt_frame.layerName = layerName;
+            // ctxt_frame.direction = direction;
+            // ctxt_frame.layerIndex = layerIndex;
         }
         ctxt_frame = frames[i]; //set method_id and bci
         if (last_ctxt == nullptr) last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
@@ -224,7 +229,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 }
 
 void Profiler::GenericAnalysis(perf_sample_data_t *sampleData, void *uCtxt, jmethodID method_id, uint32_t method_version, uint32_t threshold, int metric_id2) {
-    if (layerInfo.index != -1) {
+    if (layerInfo.name != "") {
         Context *ctxt_access = constructContext(_asgct, uCtxt, sampleData->ip, nullptr, method_id, method_version, 10, layerInfo.name, layerInfo.direction, layerInfo.index);
         if (ctxt_access != nullptr && sampleData->ip != 0) {
 		    metrics::ContextMetrics *metrics = ctxt_access->getMetrics();
