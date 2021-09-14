@@ -1,15 +1,16 @@
 #include "gputrigger.h"
 
-#include <sanitizer.h>
 #include <string>
 #include <unistd.h>
 
+#include <cuda_runtime.h>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <sys/syscall.h>
 #include <vector>
+
 //#define DYN_FN_NAME(f) f ## _fn
 #define SANITIZER_FN_NAME(f) f
 
@@ -27,15 +28,45 @@
 #define GPUTRIGGER_SANITIZER_CALL_NO_CHECK(fn, args)                           \
   { SANITIZER_FN_NAME(fn) args; }
 
+#define SANITIZER_API_DEBUG 1
+#if SANITIZER_API_DEBUG
+#define PRINT(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define PRINT(...)
+#endif
+
+typedef void (*sanitizer_error_callback_t)(const char *type, const char *fn,
+                                           const char *error_string);
+
+static void sanitizer_error_callback_dummy(const char *type, const char *fn,
+                                           const char *error_string);
+
+static sanitizer_error_callback_t sanitizer_error_callback =
+    sanitizer_error_callback_dummy;
+
+static void sanitizer_error_callback_dummy // __attribute__((unused))
+    (const char *type, const char *fn, const char *error_string) {
+  PRINT("Sanitizer-> %s: function %s failed with error %s\n", type, fn,
+        error_string);
+  exit(-1);
+}
+
+static void sanitizer_error_report(SanitizerResult error, const char *fn) {
+  const char *error_string;
+  SANITIZER_FN_NAME(sanitizerGetResultString)(error, &error_string);
+  sanitizer_error_callback("Sanitizer result error", fn, error_string);
+}
+
+
+
 static Sanitizer_SubscriberHandle sanitizer_subscriber_handle;
 
 struct GPUCallTree {
   std::string kernel_name;
   int gridDim_x, gridDim_y, gridDim_z, blockDim_x, blockDim_y, blockDim_z;
-}
+};
 
-std::vector<GPUCallTree>
-    gpu_calltree_vector;
+std::vector<GPUCallTree> gpu_calltree_vector;
 
 static void sanitizer_subscribe_callback(void *userdata,
                                          Sanitizer_CallbackDomain domain,
@@ -53,10 +84,9 @@ static void sanitizer_subscribe_callback(void *userdata,
       block_size.x = ld->blockDim_x;
       block_size.y = ld->blockDim_y;
       block_size.z = ld->blockDim_z;
-      PRINT("Sanitizer-> Launch kernel %s <%d, %d, %d>:<%d, %d, %d>, \n" ld
-                ->functionName,
-            ld->gridDim_x, ld->gridDim_y, ld->gridDim_z, ld->blockDim_x,
-            ld->blockDim_y, ld->blockDim_z);
+      PRINT("Sanitizer-> Launch kernel %s <%d, %d, %d>:<%d, %d, %d>, \n",
+            ld->functionName, ld->gridDim_x, ld->gridDim_y, ld->gridDim_z,
+            ld->blockDim_x, ld->blockDim_y, ld->blockDim_z);
 
       // @findhao: add to buffer
       GPUCallTree tmp = {ld->functionName, ld->gridDim_x,  ld->gridDim_y,

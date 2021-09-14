@@ -3,7 +3,9 @@ export BUILD_DIR
 
 include ../common.mk
 
-INC_DIRS += $(JAVA_HOME)/include $(JAVA_HOME)/include/linux ./external/hpctoolkit/lib/prof-lean ./external/hpctoolkit ./util ./util/arch/x86-family $(BUILD_DIR)/thirdparty/include $(Sanitizer_HOME)/include
+
+
+INC_DIRS += $(JAVA_HOME)/include $(JAVA_HOME)/include/linux ./external/hpctoolkit/lib/prof-lean ./external/hpctoolkit ./util ./util/arch/x86-family $(BUILD_DIR)/thirdparty/include $(CUDA_PATH)/compute-sanitizer/include  $(CUDA_PATH)/include
 
 CC := gcc
 CXX := g++
@@ -24,7 +26,7 @@ INC_DIRS += $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 
-COMMON_FLAGS += -Wall -DUSE_BOOST_UNORDERED_CONTAINER -DENABLE_CALL_PATH_COLLECTION -L$(Sanitizer_HOME)
+COMMON_FLAGS += -Wall -DUSE_BOOST_UNORDERED_CONTAINER -DENABLE_CALL_PATH_COLLECTION -L$(CUDA_PATH)/compute-sanitizer -L$(CUDA_PATH)/lib
 
 CFLAGS += $(COMMON_FLAGS) $(INC_FLAGS) 
 CXXFLAGS += $(COMMON_FLAGS) $(INC_FLAGS) -std=c++11
@@ -32,7 +34,7 @@ CXXFLAGS += $(COMMON_FLAGS) $(INC_FLAGS) -std=c++11
 all: $(BUILD_DIR)/libagent.so 
 
 $(BUILD_DIR)/libagent.so: $(OBJS_PATH) $(BUILD_DIR)/libhpctoolkit.a 
-	$(LD) -Wl,--whole-archive $(BUILD_DIR)/libhpctoolkit.a -Wl,-no-whole-archive -shared -m64  -Wl,-soname,libagent.so -o $@ $(OBJS_PATH) -Wl,-rpath=$(BUILD_DIR)/thirdparty/lib -L$(BUILD_DIR)/thirdparty/lib -lwatchpoint -lxed -lc -lpfm -ldl -lnuma -L$(JXPerf_HOME)/bin/kissmalloc -lkissmalloc -L$(BUILD_DIR)/preload -lpreload -lsanitizer-public
+	$(LD) -Wl,--whole-archive $(BUILD_DIR)/libhpctoolkit.a -Wl,-no-whole-archive -shared -m64  -Wl,-soname,libagent.so -o $@ $(OBJS_PATH) -Wl,-rpath=$(BUILD_DIR)/thirdparty/lib -L$(BUILD_DIR)/thirdparty/lib -lwatchpoint -lxed -lc -lpfm -ldl -lnuma -L$(JXPerf_HOME)/bin/kissmalloc -lkissmalloc -L$(BUILD_DIR)/preload -lpreload -lsanitizer-public -L$(CUDA_PATH)/compute-sanitizer -L$(CUDA_PATH)/lib
 
 $(BUILD_DIR)/libhpctoolkit.a:
 	$(MAKE) -C external
