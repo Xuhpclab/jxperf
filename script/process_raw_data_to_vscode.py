@@ -10,6 +10,7 @@ import re
 import xml.etree.ElementTree as ET
 
 import json
+import drcctprof_data_builder as ddb
 
 output_root = sys.argv[1]
 
@@ -433,6 +434,41 @@ def output_to_vscode(tid, method_manager, context_manager, ctxt_map, tree_node_m
                 last_tree_item_id = ctxt_hndl_str
     return thread_tree_root
 
+def output_to_drcctprofdata(tid, method_manager, context_manager, builder):
+    thread_tree_root = None
+    intpr = interpreter.Interpreter(method_manager, context_manager)
+    rtraces = context_manager.getAllRtrace("0")
+    for rtrace in rtraces:
+        metrics_value = 0
+        if len(rtrace) > 0:
+            metrics_value = rtrace[0].metrics_dict["value"]
+        else:
+            continue
+        metricMsgList = []
+        metricMsgList.append(ddb.MetricMsg(0, metrics_value, ""))
+        contextMsgList = []
+        # contextMsgList.append(ddb.ContextMsg(0, "", "root", "root", 0, 0))
+        for trace_node in reversed(rtrace):
+            if trace_node.id != "0":
+                key = intpr.getInterpreter_Context(trace_node)
+                if key.ctype < 0 and len(rtrace) == 2:
+                    break
+                elif key.ctype < 0:
+                    continue
+
+                if key.ctype == 0:
+                    # print(trace_node.id)
+                    contextMsgList.append(ddb.ContextMsg(sys.maxsize-int(tid), "", "Thread["+ tid + "]ROOT", "Thread["+ tid + "]ROOT", 0, 0))
+                
+                elif key.ctype == 1:
+                    file_path = get_file_path(key.source_file, key.class_name)
+                    # print(file_path)
+                    if key.source_lineno == "??":
+                        key.source_lineno = "0"
+                    line_no = int(key.source_lineno)
+                    contextMsgList.append(ddb.ContextMsg(int(trace_node.id), file_path, key.class_name + "." + key.method_name, key.class_name + "." + key.method_name, 0, line_no))
+        builder.addSample(contextMsgList, metricMsgList)
+
 def recursion_merge_list(node_list, ctxt_map, tree_node_map):
     new_list = []
     for node1 in node_list:
@@ -486,7 +522,8 @@ def update_sourcefile_map(file_name, filepath, type):
                 else :
                     package_name = line[8:-1]
                 # print(package_name + ":" + file_name + " " + filepath)
-                g_file_map[package_name + ":" + file_name] = filepath.replace(output_root+"/", "")
+                g_file_map[package_name + ":" + file_name] = filepath
+                print(output_root)
                 break
 
 def init_sourcefile_map(path):
@@ -545,41 +582,49 @@ def main():
         }
     }
     tree_root = tree_node_map["process-root"]
+    builder = ddb.Builder()
+    builder.addMetricType(1, "number", "cpu cycles")
     for tid in manager_dict:
         if tid == "method":
             continue
         # print(tid)
         # output_to_buff(manager_dict["method"], manager_dict[tid])
-        thread_tree_root = output_to_vscode(tid, manager_dict["method"], manager_dict[tid], ctxt_map, tree_node_map)
+        # thread_tree_root = output_to_vscode(tid, manager_dict["method"], manager_dict[tid], ctxt_map, tree_node_map)
+        output_to_drcctprofdata(tid, manager_dict["method"], manager_dict[tid], builder)
+    builder.generateProfile("test.drcctprof")
 
-        if thread_tree_root:
-            # tree_root['c'].append(thread_tree_root)
-            merge_tree_node(tree_root, thread_tree_root, ctxt_map, tree_node_map)
+        # if thread_tree_root:
+        #     # tree_root['c'].append(thread_tree_root)
+        #     merge_tree_node(tree_root, thread_tree_root, ctxt_map, tree_node_map)
+    
 
-    print(cout_tree_node(tree_root))
-    get_simple_tree(tree_root, tree_root['v']/1000)
-    print(cout_tree_node(tree_root))
+    # print(cout_tree_node(tree_root))
+    # get_simple_tree(tree_root, tree_root['v']/1000)
+    # print(cout_tree_node(tree_root))
 
-    drdata_folder = output_root + "/.drcctprof";
-    print(drdata_folder)
+    # drdata_folder = output_root + "/.drcctprof";
+    # print(drdata_folder)
 
-    if not os.path.exists(drdata_folder):
-        os.makedirs(drdata_folder)
-    with open(drdata_folder + '/ctxt-map.json', 'w') as fp:
-        json.dump(ctxt_map, fp)
+    # if not os.path.exists(drdata_folder):
+    #     os.makedirs(drdata_folder)
+    # with open(drdata_folder + '/ctxt-map.json', 'w') as fp:
+    #     json.dump(ctxt_map, fp)
 
-    with open(drdata_folder + '/flame-graph.json', 'w') as fp:
-        json.dump(tree_root, fp)
+    # with open(drdata_folder + '/flame-graph.json', 'w') as fp:
+    #     json.dump(tree_root, fp)
 
-    metrics = [
-        {
-            "Des": "Global CPU Cycles",
-            "Type": 1
-        }
-    ]
+    # metrics = [
+    #     {
+    #         "Des": "Global CPU Cycles",
+    #         "Type": 1
+    #     }
+    # ]
 
-    with open(drdata_folder + '/metrics.json', 'w') as fp:
-        json.dump(metrics, fp)
+    # with open(drdata_folder + '/metrics.json', 'w') as fp:
+    #     json.dump(metrics, fp)
+
+
+    
     # remove_all_files(".")
 
 main()
