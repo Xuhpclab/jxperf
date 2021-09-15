@@ -29,6 +29,12 @@ class SouceFileTable:
     def __init__(self, profile:drcctprof_profile.Profile):
         self.profile = profile
         self.table = {}
+        sourceFile = self.profile.source_file.add()
+        sourceFile.id = 0
+        sourceFile.filename = 0
+        sourceFile.location_path = 0
+        sourceFile.type = 0
+        self.table[0] = sourceFile
     
     def addSourceFile(self, fileNameIndex, filePathIndex, type):
         if filePathIndex in self.table.keys():
