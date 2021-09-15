@@ -104,6 +104,7 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
         if (i == 0) {
             // ctxt_frame.binary_addr = ip;
             ctxt_frame.numa_node = object_numa_node;
+            // ctxt_frame.cuda_kernel_name = "xiaoyuren";
             // ctxt_frame.layerName = layerName;
             // ctxt_frame.direction = direction;
             // ctxt_frame.layerIndex = layerIndex;
@@ -122,6 +123,11 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
     if (ctxt == nullptr && last_ctxt != nullptr) ctxt_frame.bci = -65536;
     if (last_ctxt != nullptr) last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame);
     // else last_ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame);
+
+    // cuda leaf node: iterate buffer
+    ContextFrame ctxt_frame_cuda;
+    ctxt_frame_cuda.cuda_kernel_name = "Fake Cuda Node";
+    last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame_cuda);
     
     return last_ctxt;
 }
@@ -150,7 +156,7 @@ void Profiler::OnSample(int eventID, perf_sample_data_t *sampleData, void *uCtxt
 
     // generic analysis
     if (clientName.compare(GENERIC) == 0) {
-        GenericAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2);
+        GenericAnalysis(sampleData, uCtxt, method_id, method_version, threshold, metric_id2); 
         return;
     }
 
@@ -849,14 +855,14 @@ void Profiler::init() {
     ThreadData::thread_data_init();
     
     assert(PerfManager::processInit(JVM::getArgument()->getPerfEventList(), Profiler::OnSample));
-    assert(WP_Init());
+    // assert(WP_Init());
     std::string client_name = GetClientName();
     std::transform(client_name.begin(), client_name.end(), std::back_inserter(clientName), ::toupper);
 }
 
 
 void Profiler::shutdown() {
-    WP_Shutdown();
+    // WP_Shutdown();
     PerfManager::processShutdown();
     if(onload_flag) {
         ThreadData::thread_data_shutdown();
@@ -914,14 +920,14 @@ void Profiler::threadStart() {
         TD_GET(pmu_ins_output_stream) = reinterpret_cast<void *>(pmu_ins_output_stream);
 #endif
     }
-    if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
-    else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
-    else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
-    else if (clientName.compare(REUSE_DISTANCE) == 0) assert(WP_ThreadInit(Profiler::OnReuseDistanceWatchPoint));
-    else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0) { 
-        ERROR("Can't decode client %s", clientName.c_str());
-        assert(false);
-    }
+    // if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
+    // else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
+    // else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
+    // else if (clientName.compare(REUSE_DISTANCE) == 0) assert(WP_ThreadInit(Profiler::OnReuseDistanceWatchPoint));
+    // else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0) { 
+    //     ERROR("Can't decode client %s", clientName.c_str());
+    //     assert(false);
+    // }
     PopulateBlackListAddresses();
     PerfManager::setupEvents();
 }

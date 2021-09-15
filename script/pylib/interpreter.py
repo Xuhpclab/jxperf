@@ -2,8 +2,8 @@ from . import code_cache
 from . import context
 
 class Interpreter_Context:
-	def __init__(self, ctype, class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index):
-		self.ctype, self.class_name, self.method_name, self.source_file, self.source_lineno, self.method_start_line, self.layer_name, self.layer_direction, self.layer_index= ctype, class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index
+	def __init__(self, ctype, class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index, cuda_kernel_name):
+		self.ctype, self.class_name, self.method_name, self.source_file, self.source_lineno, self.method_start_line, self.layer_name, self.layer_direction, self.layer_index, self.cuda_kernel_name= ctype, class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index, cuda_kernel_name
 
 class Interpreter:
 	def __init__(self, method_manager, context_manager):
@@ -21,34 +21,34 @@ class Interpreter:
 		layerName = context.layerName
 		direction = context.direction
 		layerIndex = context.layerIndex
+		cudaKernelName = context.cudaKernelName
 		if self._context_manager.isRoot(context):
-			class_name, method_name, source_file, source_lineno, method_start_line, ip, layer_name, layer_direction, layer_index = "Root", None, None, None, None, None, layerName, direction, layerIndex
+			class_name, method_name, source_file, source_lineno, method_start_line, ip, layer_name, layer_direction, layer_index, cuda_kernel_name = "Root", None, None, None, None, None, layerName, direction, layerIndex, cudaKernelName
 
 		elif ip != "0": ## leaf node
 			method = self._method_manager.getMethod(context.method_id, context.method_version)
 			if method:
 				class_name = method.class_name
-				method_name = method.method_name	
-				layerName = context.layerName			
+				method_name = method.method_name				
 				source_file = method.file
 				source_lineno = method.addr2line(context.binary_addr)
 				method_start_line = method.start_line
+				cudaKernelName = context.cudaKernelName
 			else:
-				class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index= None, None, None, None, None, layerName, direction, layerIndex
+				class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index, cuda_kernel_name= None, None, None, None, None, layerName, direction, layerIndex, cudaKernelName
 
 
 		else: ## middle node
 			method = self._method_manager.getMethod(context.method_id, context.method_version)
 			if method:
 				method_name = method.method_name
-				layerName = context.layerName
 				class_name = method.class_name
 				source_file = method.file
 				source_lineno = method.bci2line(context.bci)
 				method_start_line = method.start_line
 				ip = None
 			else:
-				class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index= None, None, None, None, None, layerName, direction, layerIndex
+				class_name, method_name, source_file, source_lineno, method_start_line, layer_name, layer_direction, layer_index, cuda_kernel_name= None, None, None, None, None, layerName, direction, layerIndex, cudaKernelName
 
 		if class_name == None or len(class_name) == 0:
 			class_name = "??"
@@ -72,17 +72,17 @@ class Interpreter:
 
 
 		if context.bci == "-65535":
-			return Interpreter_Context(-1, None, None, None, None, None, None, None, None)
+			return Interpreter_Context(-1, None, None, None, None, None, None, None, None, None)
 		# elif context.bci == "-65536" and isNuma:
 		# 	return "***********************Access to the object above***********************"
 		elif context.bci == "-65536":
-			return Interpreter_Context(-2, None, None, None, None, None, None, None, None)
+			return Interpreter_Context(-2, None, None, None, None, None, None, None, None, None)
 		elif class_name == "Root":
-			return Interpreter_Context(0, None, None, None, None, None, None, None, None)
+			return Interpreter_Context(0, None, None, None, None, None, None, None, None, None)
 		# elif ip != "":
 			# return ""
 		else:
-			return Interpreter_Context(1, class_name, method_name, source_file, source_lineno, method_start_line, layerName, direction, layerIndex)
+			return Interpreter_Context(1, class_name, method_name, source_file, source_lineno, method_start_line, layerName, direction, layerIndex, cudaKernelName)
 
 
 	def getSrcPosition(self, context):

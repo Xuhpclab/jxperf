@@ -31,6 +31,8 @@ public:
    const char* layerName = "";
    const char* direction = "";
    uint32_t layerIndex = -1;
+
+   const char* cuda_kernel_name = "";
 };
 
 

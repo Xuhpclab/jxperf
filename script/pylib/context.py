@@ -9,6 +9,7 @@ class Context:
 		self.layerName = None
 		self.direction = None
 		self.layerIndex = None
+		self.cudaKernelName = None
 		self.method_id = None
 		self.bci = None
 		self.metrics_type = None
