@@ -451,7 +451,7 @@ def output_to_drcctprofdata(tid, method_manager, context_manager, builder):
         metricMsgList = []
         metricMsgList.append(ddb.MetricMsg(0, metrics_value, ""))
         contextMsgList = []
-        # contextMsgList.append(ddb.ContextMsg(0, "", "root", "root", 0, 0))
+        contextMsgList.append(ddb.ContextMsg(sys.maxsize, "", "root", "root", 0, 0))
         for trace_node in reversed(rtrace):
             if trace_node.id != "0":
                 key = intpr.getInterpreter_Context(trace_node)
@@ -462,7 +462,7 @@ def output_to_drcctprofdata(tid, method_manager, context_manager, builder):
 
                 if key.ctype == 0:
                     # print(trace_node.id)
-                    contextMsgList.append(ddb.ContextMsg(sys.maxsize-int(tid), "", "Thread["+ tid + "]ROOT", "Thread["+ tid + "]ROOT", 0, 0))
+                    contextMsgList.append(ddb.ContextMsg(sys.maxsize-int(tid)-1, "", "Thread["+ tid + "]ROOT", "Thread["+ tid + "]ROOT", 0, 0))
                 
                 elif key.ctype == 1:
                     # file_path = get_file_path(key.source_file, key.class_name)
