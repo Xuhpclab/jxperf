@@ -855,14 +855,14 @@ void Profiler::init() {
     ThreadData::thread_data_init();
     
     assert(PerfManager::processInit(JVM::getArgument()->getPerfEventList(), Profiler::OnSample));
-    // assert(WP_Init());
+    assert(WP_Init());
     std::string client_name = GetClientName();
     std::transform(client_name.begin(), client_name.end(), std::back_inserter(clientName), ::toupper);
 }
 
 
 void Profiler::shutdown() {
-    // WP_Shutdown();
+    WP_Shutdown();
     PerfManager::processShutdown();
     if(onload_flag) {
         ThreadData::thread_data_shutdown();
@@ -920,14 +920,14 @@ void Profiler::threadStart() {
         TD_GET(pmu_ins_output_stream) = reinterpret_cast<void *>(pmu_ins_output_stream);
 #endif
     }
-    // if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
-    // else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
-    // else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
-    // else if (clientName.compare(REUSE_DISTANCE) == 0) assert(WP_ThreadInit(Profiler::OnReuseDistanceWatchPoint));
-    // else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0) { 
-    //     ERROR("Can't decode client %s", clientName.c_str());
-    //     assert(false);
-    // }
+    if (clientName.compare(DEADSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnDeadStoreWatchPoint));
+    else if (clientName.compare(SILENTSTORE_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedStoreWatchPoint));
+    else if (clientName.compare(SILENTLOAD_CLIENT_NAME) == 0) assert(WP_ThreadInit(Profiler::OnRedLoadWatchPoint));
+    else if (clientName.compare(REUSE_DISTANCE) == 0) assert(WP_ThreadInit(Profiler::OnReuseDistanceWatchPoint));
+    else if (clientName.compare(DATA_CENTRIC_CLIENT_NAME) != 0 && clientName.compare(NUMANODE_CLIENT_NAME) != 0 && clientName.compare(GENERIC) != 0 && clientName.compare(HEAP) != 0 && clientName.compare(ALLOCATION_TIMES) != 0) { 
+        ERROR("Can't decode client %s", clientName.c_str());
+        assert(false);
+    }
     PopulateBlackListAddresses();
     PerfManager::setupEvents();
 }
