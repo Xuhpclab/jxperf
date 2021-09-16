@@ -22,6 +22,6 @@
 [submodule "thirdparty/kissmalloc"]
 	path = thirdparty/kissmalloc
 	url = https://gitlab.com/frankencode/kissmalloc.git
-[submodule "thirdparty/dl4j-layer-callback"]
-	path = thirdparty/dl4j-layer-callback
+[submodule "thirdparty/dl4j-layer-callbacks"]
+	path = thirdparty/dl4j-layer-callbacks
 	url = https://github.com/bolunli11/dl4j-layer-callback.git
