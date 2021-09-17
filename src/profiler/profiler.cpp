@@ -89,8 +89,13 @@ Context *constructContext(ASGCT_FN asgct, void *uCtxt, uint64_t ip, Context *ctx
     ctxt_frame_layer.direction = direction;
     ctxt_frame_layer.layerIndex = layerIndex;
     ctxt = ctxt_tree->addContext((uint32_t)CONTEXT_TREE_ROOT_ID, ctxt_frame_layer);
-
     Context *last_ctxt = ctxt;
+
+    ContextFrame ctxt_frame_layer_dir;
+    ctxt_frame_layer_dir.layerName = "2ndfake";
+    ctxt_frame_layer_dir.direction = direction;
+    ctxt_frame_layer_dir.layerIndex = layerIndex;
+    last_ctxt = ctxt_tree->addContext(last_ctxt, ctxt_frame_layer_dir);
 
     ASGCT_CallFrame frames[MAX_FRAME_NUM];
     ASGCT_CallTrace trace;

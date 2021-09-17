@@ -465,22 +465,31 @@ def output_to_drcctprofdata(tid, method_manager, context_manager, builder):
                     contextMsgList.append(ddb.ContextMsg(sys.maxsize-int(tid)-1, "", "Thread["+ tid + "]ROOT", "Thread["+ tid + "]ROOT", 0, 0))
                 
                 elif key.ctype == 1:
-                    # file_path = get_file_path(key.source_file, key.class_name)
-                    # print(file_path)
+                    file_path = get_file_path(key.source_file, key.class_name)
                     if key.source_lineno == "??":
                         if key.layer_name == "":
                             key.source_lineno = "0"
-                        else:
+                        elif "2nd" not in key.layer_name:
                             key.class_name = key.layer_name
                             key.method_name = key.layer_direction
                             key.source_lineno = key.layer_index
+                            contextMsgList.append(ddb.ContextMsg(int(trace_node.id), file_path, key.class_name, key.class_name, 0, int(key.source_lineno)))
+                            # contextMsgList.append(ddb.ContextMsg(int(trace_node.id), file_path, key.class_name + "." + key.method_name, key.class_name + "." + key.method_name, 0, int(key.source_lineno)))
+                            continue
+                        else:
+                            key.class_name = key.layer_direction
+                            key.method_name = key.layer_direction
+                            key.source_lineno = key.layer_index
+                            contextMsgList.append(ddb.ContextMsg(int(trace_node.id), file_path, key.class_name, key.class_name, 0, int(key.source_lineno)))
+                            continue
                     if key.class_name == "??":
-                        # print(key.cuda_kernel_name)
                         key.class_name = key.cuda_kernel_name
                         key.method_name = key.cuda_kernel_name
                         key.source_lineno = "0"
+                    if "Op" not in key.class_name and "Op" not in key.method_name:
+                        continue
                     line_no = int(key.source_lineno)
-                    file_path = get_file_path(key.source_file, key.class_name)
+                    # file_path = get_file_path(key.source_file, key.class_name)
                     contextMsgList.append(ddb.ContextMsg(int(trace_node.id), file_path, key.class_name + "." + key.method_name, key.class_name + "." + key.method_name, 0, line_no))
         builder.addSample(contextMsgList, metricMsgList)
 
