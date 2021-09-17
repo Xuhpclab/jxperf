@@ -3,7 +3,7 @@
 Java inefficiency detection tool based on CPU performance monitoring counters and hardware debug registers. The tool detects dead writes, silent stores, redundant loads, and memory bloat.
 
 ![build master](https://github.com/Xuhpclab/jxperf/workflows/build%20master/badge.svg)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/42f3be52e8a04bd19f3be986f660600e)](https://app.codacy.com/gh/Xuhpclab/jxperf?utm_source=github.com&utm_medium=referral&utm_content=Xuhpclab/jxperf&utm_campaign=Badge_Grade_Dashboard)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/c7371e45a6b84a169f3bc775893e3511)](https://www.codacy.com/gh/bolunli11/JXPerf/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bolunli11/JXPerf&amp;utm_campaign=Badge_Grade)
 ![license](https://img.shields.io/github/license/Xuhpclab/jxperf)
 
 ## Contents
