@@ -21,6 +21,21 @@ isNuma = False
 isGeneric = False
 isHeap = False
 
+# dl4j base operations
+base_ops = ["any", "argmax", "argmin", "batchMmul", "castTo", "concat", "cumprod", "cumsum",
+            "dot", "dynamicPartition", "dynamicStitch", "eq", "expandDims", "fill", "gather", "gatherND",
+            "gte", "identity", "invertPermutation", "isNumericTensor", "linspace",
+            "lte", "matchCondition", "matchConditionCount", "max", "mean", "merge", "min", "mmul", 
+            "neq", "norm1", "norm2", "normmax", "oneHot", "onesLike", "permute", "prod", "range",
+            "rank", "replaceWhere", "reshape", "reverse", "reverseSequence", "scalarFloorMod",
+            "scalarMax", "scalarMin", "scalarSet", "scatterAdd", "scatterDiv", "scatterMax",
+            "scatterMin", "scatterMul", "scatterSub", "scatterUpdate", "segmentMax", "segmentMean",
+            "segmentMin", "segmentProd", "segmentSum", "sequenceMask", "shape", "size", "sizeAt",
+            "slice", "squardNorm", "squeeze", "stack", "standardDeviation", "stridedSlice", "sum",
+            "switchOp", "tensorMmul", "tile", "transpose", "unsortedSegmentMax", "unsortedSegmentMean",
+            "unsortedSegmentMin", "unsortedSegmentProd", "unsortedSegmentSqrtN", "unsortedSegmentSum",
+            "unstack", "variance", "zerosLike"]
+
 g_thread_context_dict = dict()
 g_method_dict = dict()
 g_file_map = dict()
@@ -486,10 +501,16 @@ def output_to_drcctprofdata(tid, method_manager, context_manager, builder):
                         key.class_name = key.cuda_kernel_name
                         key.method_name = key.cuda_kernel_name
                         key.source_lineno = "0"
-                    if "Op" not in key.class_name and "Op" not in key.method_name:
+                    flag = 0
+                    for op in base_ops:
+                        if op not in key.method_name and "Op" not in key.method_name:
+                            continue
+                        else:
+                            flag = 1
+                            break
+                    if flag == 0:
                         continue
                     line_no = int(key.source_lineno)
-                    # file_path = get_file_path(key.source_file, key.class_name)
                     contextMsgList.append(ddb.ContextMsg(int(trace_node.id), file_path, key.class_name + "." + key.method_name, key.class_name + "." + key.method_name, 0, line_no))
         builder.addSample(contextMsgList, metricMsgList)
 
