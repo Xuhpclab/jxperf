@@ -1,0 +1,1 @@
+java -agentpath:$JXPerf_HOME/bin/wallclock/wallClockProfile.so=start,event=wall,interval=5ms,file=profile.html -jar $JXPerf_HOME/benchmark/dacapo.jar -s large lusearch
