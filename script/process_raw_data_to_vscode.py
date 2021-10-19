@@ -501,15 +501,15 @@ def output_to_drcctprofdata(tid, method_manager, context_manager, builder):
                         key.class_name = key.cuda_kernel_name
                         key.method_name = key.cuda_kernel_name
                         key.source_lineno = "0"
-                    flag = 0
-                    for op in base_ops:
-                        if op not in key.method_name and "Op" not in key.method_name:
-                            continue
-                        else:
-                            flag = 1
-                            break
-                    if flag == 0:
-                        continue
+                    # flag = 0
+                    # for op in base_ops:
+                    #     if op not in key.method_name and "Op" not in key.method_name:
+                    #         continue
+                    #     else:
+                    #         flag = 1
+                    #         break
+                    # if flag == 0:
+                    #     continue
                     line_no = int(key.source_lineno)
                     contextMsgList.append(ddb.ContextMsg(int(trace_node.id), file_path, key.class_name + "." + key.method_name, key.class_name + "." + key.method_name, 0, line_no))
         builder.addSample(contextMsgList, metricMsgList)
