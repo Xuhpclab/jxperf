@@ -1,5 +1,5 @@
 # CPU Cycles
-LD_PRELOAD=$JXPerf_HOME/build/libpreload.so
+LD_PRELOAD=$JXPerf_HOME/build/preload/libpreload.so
 java \
     -agentpath:$JXPerf_HOME/build/libagent.so=Generic::CYCLES:precise=2@1000000 \
     -jar ./dacapo.jar lusearch
@@ -19,7 +19,7 @@ java \
 #     -jar ./dacapo.jar -s large lusearch
 
 # Offline process -- VS Code GUI
-# $JXPerf_HOME/script/process_raw_data_to_vscode.py $JXPerf_HOME/benchmark/lucene
+$JXPerf_HOME/script/process_raw_data_to_vscode.py $JXPerf_HOME/benchmark/lucene
 
 # View
 # code ./lucene
