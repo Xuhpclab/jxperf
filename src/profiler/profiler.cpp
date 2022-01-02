@@ -832,14 +832,14 @@ void Profiler::init() {
     ThreadData::thread_data_init();
     
     assert(PerfManager::processInit(JVM::getArgument()->getPerfEventList(), Profiler::OnSample));
-    assert(WP_Init());
+    // assert(WP_Init());
     std::string client_name = GetClientName();
     std::transform(client_name.begin(), client_name.end(), std::back_inserter(clientName), ::toupper);
 }
 
 
 void Profiler::shutdown() {
-    WP_Shutdown();
+    // WP_Shutdown();
     PerfManager::processShutdown();
     if(onload_flag) {
         ThreadData::thread_data_shutdown();
