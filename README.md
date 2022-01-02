@@ -92,7 +92,7 @@ $ python $JXPerf_HOME/script/process_raw_data.py
 #### 5. To run NUMA locality analysis
 -   **Start Profiler**
 ```console
-$ $ LD_PRELOAD=$JXPerf_HOME/build/preload/libpreload.so java -javaagent:$JAVA_AGENT -agentpath:$JXPerf_HOME/build/libagent.so=Numa::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@<sampling rate> -cp <classpath> <java program>
+$ LD_PRELOAD=$JXPerf_HOME/build/preload/libpreload.so java -javaagent:$JAVA_AGENT -agentpath:$JXPerf_HOME/build/libagent.so=Numa::MEM_LOAD_UOPS_RETIRED:L1_MISS:precise=2@<sampling rate> -cp <classpath> <java program>
 ```
 -   **Generate profiling results "agent-data"**
 ```console
