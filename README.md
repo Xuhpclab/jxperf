@@ -22,7 +22,7 @@ Java inefficiency detection tool based on CPU performance monitoring counters an
 
 -   Install Oracle/OpenJDK and Apache Maven.
 -   Instaill python modules: bintrees and google-api-python-client
--   Turn on PMU sampling in your environment (```sysctl -w kernel.perf_event_paranoid=1```)
+-   Turn on PMU sampling in your environment:```sysctl -w kernel.perf_event_paranoid=1```
 -   cp set_env.template set_env
 -   Modify set_env to make JXPerf_HOME, JAVA_HOME and MAVEN_HOME point to your JXPerf, Java and Maven home.
 -   source set_env
