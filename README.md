@@ -139,7 +139,7 @@ $ ./run_attach.sh <running time in seconds> <pid>
 
 ### VS Code GUI
 
--   In VS Code, search fir drcctprof viewer extension and install it
+-   In VS Code, search for ```DrCCTProf Viewer``` extension and install it
 -   Generate the drcctprof format profile (test.drcctprof):```$JXPerf_HOME/script/process_raw_data_to_vscode.py <source code foler>```
 -   View the test.drcctprof in VS Code:```code test.drcctprof```
 
