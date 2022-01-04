@@ -21,7 +21,8 @@ Java inefficiency detection tool based on CPU performance monitoring counters an
 #### 1. Installation Prerequisites
 
 -   Install Oracle/OpenJDK and Apache Maven.
--   Instaill python modules: bintrees and google-api-python-client
+-   Install libnuma library
+-   Install python modules: bintrees and google-api-python-client
 -   Turn on PMU sampling in your environment:```sysctl -w kernel.perf_event_paranoid=1```
 -   cp set_env.template set_env
 -   Modify set_env to make JXPerf_HOME, JAVA_HOME and MAVEN_HOME point to your JXPerf, Java and Maven home.
@@ -135,6 +136,12 @@ $ python $JXPerf_HOME/script/process_raw_data.py
 ```console
 $ ./run_attach.sh <running time in seconds> <pid>
 ```
+
+### VS Code GUI
+
+-   In VS Code, search fir drcctprof viewer extension and install it
+-   Generate the drcctprof format profile (test.drcctprof):```$JXPerf_HOME/script/process_raw_data_to_vscode.py <source code foler>```
+-   View the test.drcctprof in VS Code:```code test.drcctprof```
 
 ## Support Platforms
 
